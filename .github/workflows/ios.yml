@@ -48,7 +48,19 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Debug \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Check localizations
+        run: |
+          APP=build/DerivedData/Build/Products/Debug-iphoneos/PreWorkout.app
+          for lang in pl en; do
+            ls "$APP/$lang.lproj"
+            test -f "$APP/$lang.lproj/InfoPlist.strings"
+          done
+          test -f "$APP/en.lproj/Localizable.strings"
+          plutil -p "$APP/en.lproj/Localizable.strings" | head -5
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleLocalizations' "$APP/Info.plist"
 
   testflight:
     name: Archive and upload to TestFlight
