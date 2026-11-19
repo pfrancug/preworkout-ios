@@ -21,3 +21,6 @@ xcuserdata/
 
 # Python
 __pycache__/
+
+# Local notes (never commit)
+docs/
