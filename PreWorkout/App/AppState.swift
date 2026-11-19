@@ -68,6 +68,24 @@ final class AppState {
         phase = .needsLogin
     }
 
+    /// Activity categories of the active person (workout category picker).
+    private(set) var categories: [ActivityCategory] = []
+    private var categoriesPersonId: String?
+
+    func loadCategoriesIfNeeded() async {
+        guard categoriesPersonId != activePersonId else { return }
+        let personId = activePersonId
+        if let list = try? await api.categories(person: personId) {
+            categories = list
+            categoriesPersonId = personId
+        }
+    }
+
+    func category(_ id: String?) -> ActivityCategory? {
+        guard let id else { return nil }
+        return categories.first { $0.id == id }
+    }
+
     func loadPeople() async throws {
         people = try await api.people()
         if !people.contains(where: { $0.id == activePersonId }) {

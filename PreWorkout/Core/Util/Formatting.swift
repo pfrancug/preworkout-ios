@@ -21,13 +21,60 @@ enum DayString {
         guard let date = date(from: day) else { return day }
         return date.formatted(date: .abbreviated, time: .omitted)
     }
+
+    /// "listopad 2026" style month label (section headers).
+    static func month(_ day: String) -> String {
+        guard let date = date(from: day) else { return String(day.prefix(7)) }
+        return date.formatted(.dateTime.month(.wide).year())
+    }
+
+    /// Weekday + date, e.g. "śr., 18 lis".
+    static func short(_ day: String) -> String {
+        guard let date = date(from: day) else { return day }
+        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+}
+
+extension Double {
+    /// Up to `digits` fraction digits in the current locale.
+    func short(_ digits: Int = 1) -> String {
+        formatted(.number.precision(.fractionLength(0...digits)))
+    }
 }
 
 extension Optional where Wrapped == Double {
     /// "–" for nil, otherwise up to `digits` fraction digits.
     func display(_ digits: Int = 1, unit: String = "") -> String {
         guard let value = self else { return "–" }
-        let text = value.formatted(.number.precision(.fractionLength(0...digits)))
+        let text = value.short(digits)
         return unit.isEmpty ? text : "\(text) \(unit)"
+    }
+}
+
+/// "1:30" for 90 s, "45 s" under a minute.
+func durationText(seconds: Double) -> String {
+    let total = Int(seconds.rounded())
+    guard total >= 60 else { return "\(seconds.short()) s" }
+    return String(format: "%d:%02d", total / 60, total % 60)
+}
+
+enum SetFormat {
+    /// Compact one-line description of a logged set, e.g. "8 powt. · +10 kg · RPE 8".
+    static func summary(_ set: WorkoutSet) -> String {
+        var parts: [String] = []
+        if let reps = set.reps { parts.append(String(localized: "\(reps) powt.")) }
+        if let hold = set.holdSeconds { parts.append(durationText(seconds: hold)) }
+        if let distance = set.distanceM { parts.append("\(distance.short()) m") }
+        if let duration = set.durationSeconds { parts.append(durationText(seconds: Double(duration))) }
+        if let weight = set.weightKg, weight > 0 { parts.append("+\(weight.short(2)) kg") }
+        if set.assistance != "none" {
+            let note = set.assistanceNote.trimmingCharacters(in: .whitespaces)
+            let name = String(localized: Labels.assistance(set.assistance))
+            parts.append(note.isEmpty ? name : "\(name) (\(note))")
+        }
+        if let rpe = set.rpe { parts.append("RPE \(rpe.short())") }
+        if let rir = set.rir { parts.append("RIR \(rir)") }
+        if let rest = set.restSeconds { parts.append(String(localized: "przerwa \(durationText(seconds: Double(rest)))")) }
+        return parts.isEmpty ? "–" : parts.joined(separator: " · ")
     }
 }

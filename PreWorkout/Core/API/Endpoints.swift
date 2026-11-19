@@ -17,71 +17,53 @@ extension APIClient {
 
     func people() async throws -> [Person] { try await get("/people") }
 
-    private func person(_ id: String) -> String { "/people/\(seg(id))" }
+    func personPath(_ id: String) -> String { "/people/\(seg(id))" }
 
     func settings(person id: String) async throws -> UserSettings {
-        try await get(person(id) + "/settings")
+        try await get(personPath(id) + "/settings")
     }
 
     func saveSettings(_ settings: UserSettings, person id: String) async throws {
-        try await sendNoContent("PUT", person(id) + "/settings", body: settings)
+        try await sendNoContent("PUT", personPath(id) + "/settings", body: settings)
     }
 
     func preferences() async throws -> UserPreferences { try await get("/preferences") }
 
-    // MARK: Diary (weight + macros)
-
-    func diary(person id: String) async throws -> [DiaryRow] { try await get(person(id) + "/diary") }
-
-    /// NOTE: the current API only replaces the whole diary (PUT). A per-row
-    /// endpoint is planned on the backend before the app edits the diary.
-    func replaceDiary(_ rows: [DiaryRow], person id: String) async throws {
-        try await sendNoContent("PUT", person(id) + "/diary", body: rows)
-    }
-
-    // MARK: Calendar
-
     func categories(person id: String) async throws -> [ActivityCategory] {
-        try await get(person(id) + "/categories")
+        try await get(personPath(id) + "/categories")
     }
 
-    func calendarEntries(person id: String) async throws -> CalendarEntries {
-        try await get(person(id) + "/calendar/entries")
-    }
+    // MARK: Workouts
 
-    func calendarNotes(person id: String) async throws -> [String: String] {
-        try await get(person(id) + "/calendar/notes")
-    }
-
-    // MARK: Training
-
-    func plans(person id: String) async throws -> [TrainingPlanSummary] {
-        try await get(person(id) + "/plans")
-    }
-
-    func plan(_ planId: String, person id: String) async throws -> TrainingPlan {
-        try await get(person(id) + "/plans/\(seg(planId))")
-    }
-
-    func workouts(person id: String, from: String? = nil, to: String? = nil) async throws -> [WorkoutSummary] {
-        var query: [String] = []
-        if let from { query.append("from=\(from)") }
-        if let to { query.append("to=\(to)") }
-        return try await get(person(id) + "/workouts" + (query.isEmpty ? "" : "?" + query.joined(separator: "&")))
+    func workouts(person id: String) async throws -> [WorkoutSummary] {
+        try await get(personPath(id) + "/workouts")
     }
 
     func workout(_ workoutId: String, person id: String) async throws -> Workout {
-        try await get(person(id) + "/workouts/\(seg(workoutId))")
+        try await get(personPath(id) + "/workouts/\(seg(workoutId))")
     }
 
     func createWorkout(_ input: WorkoutInput, person id: String) async throws -> Workout {
-        try await send("POST", person(id) + "/workouts", body: input)
+        try await send("POST", personPath(id) + "/workouts", body: input)
+    }
+
+    func updateWorkout(_ workoutId: String, _ input: WorkoutInput, person id: String) async throws -> Workout {
+        try await send("PUT", personPath(id) + "/workouts/\(seg(workoutId))", body: input)
+    }
+
+    func deleteWorkout(_ workoutId: String, person id: String) async throws {
+        try await sendNoContent("DELETE", personPath(id) + "/workouts/\(seg(workoutId))")
     }
 
     // MARK: Exercise library (shared by all people)
 
-    func searchExercises(_ query: String, limit: Int = 50) async throws -> [ExerciseRef] {
-        let q = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+    func exercises() async throws -> [Exercise] { try await get("/exercises") }
+
+    /// Full-text search (names, aliases, diacritics, typos), best match first.
+    func searchExercises(_ query: String, limit: Int = 60) async throws -> [ExerciseRef] {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+?#")
+        let q = query.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
         return try await get("/exercises/search?q=\(q)&limit=\(limit)")
     }
 
@@ -89,17 +71,20 @@ extension APIClient {
         try await get("/exercises/\(seg(exerciseId))")
     }
 
-    // MARK: Analytics + goals
-
-    func analyticsSummary(person id: String, days: Int) async throws -> AnalyticsSummary {
-        try await get(person(id) + "/analytics/summary?days=\(days)")
+    func createExercise(_ input: ExerciseInput) async throws -> Exercise {
+        try await send("POST", "/exercises", body: input)
     }
 
-    func goal(person id: String) async throws -> NutritionGoal? {
-        try await get(person(id) + "/goals")
+    func updateExercise(_ exerciseId: String, _ input: ExerciseInput) async throws -> Exercise {
+        try await send("PUT", "/exercises/\(seg(exerciseId))", body: input)
     }
 
-    func saveGoal(_ goal: NutritionGoalInput, person id: String) async throws -> NutritionGoal {
-        try await send("PUT", person(id) + "/goals", body: goal)
+    func saveAliases(_ aliases: [String], exercise exerciseId: String) async throws -> Exercise {
+        try await send("PUT", "/exercises/\(seg(exerciseId))/aliases", body: ["aliases": aliases])
+    }
+
+    /// Only unused custom exercises can be deleted (409 otherwise: archive instead).
+    func deleteExercise(_ exerciseId: String) async throws {
+        try await sendNoContent("DELETE", "/exercises/\(seg(exerciseId))")
     }
 }

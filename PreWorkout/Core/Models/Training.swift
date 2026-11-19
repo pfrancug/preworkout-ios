@@ -1,79 +1,146 @@
 import Foundation
 
-// Shapes mirror `shared/training.ts` of the web app.
+// Shapes mirror `shared/training.ts` of the web app. The API's zod schemas
+// require nullable keys to be present, so request bodies encode optionals as
+// explicit `null` instead of omitting them.
 
 struct ExerciseRef: Decodable, Identifiable, Hashable {
     let id: String
     let name: String
 }
 
-struct Exercise: Decodable, Identifiable {
+struct ExerciseLink: Codable, Hashable {
+    let source: String
+    let type: String
+    let url: String
+    let license: String?
+}
+
+struct Exercise: Decodable, Identifiable, Hashable {
     let id: String
-    let name: String
-    let aliases: [String]?
+    var name: String
+    var aliases: [String]
     /// calisthenics | gym | cardio | mobility | other
-    let modality: String
+    var modality: String
     /// push | pull | legs | core | skill | mobility | explosive
-    let category: String
-    let muscles: [String]
-    let musclesPrimary: [String]?
-    let equipment: [String]
-    let difficulty: String?
+    var category: String
+    var muscles: [String]
+    var musclesPrimary: [String]
+    var equipment: [String]
+    var family: String?
+    /// beginner | intermediate | advanced | elite
+    var difficulty: String?
     /// reps | hold | reps_weight | distance_time
-    let measurement: String
-    let description: String
-    let variants: [String]
-    let isCustom: Bool
-    let archived: Bool
+    var measurement: String
+    var description: String
+    var variants: [String]
+    var prevExerciseId: String?
+    var nextExerciseId: String?
+    var source: String?
+    var sourceLicense: String?
+    var sourceUrl: String?
+    var links: [ExerciseLink]
+    var isCustom: Bool
+    var archived: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, aliases, modality, category, muscles, musclesPrimary, equipment, family
+        case difficulty, measurement, description, variants, prevExerciseId, nextExerciseId
+        case source, sourceLicense, sourceUrl, links, isCustom, archived
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        aliases = try c.decodeIfPresent([String].self, forKey: .aliases) ?? []
+        modality = try c.decodeIfPresent(String.self, forKey: .modality) ?? "other"
+        category = try c.decodeIfPresent(String.self, forKey: .category) ?? "skill"
+        muscles = try c.decodeIfPresent([String].self, forKey: .muscles) ?? []
+        musclesPrimary = try c.decodeIfPresent([String].self, forKey: .musclesPrimary) ?? []
+        equipment = try c.decodeIfPresent([String].self, forKey: .equipment) ?? []
+        family = try c.decodeIfPresent(String.self, forKey: .family)
+        difficulty = try c.decodeIfPresent(String.self, forKey: .difficulty)
+        measurement = try c.decodeIfPresent(String.self, forKey: .measurement) ?? "reps"
+        description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
+        variants = try c.decodeIfPresent([String].self, forKey: .variants) ?? []
+        prevExerciseId = try c.decodeIfPresent(String.self, forKey: .prevExerciseId)
+        nextExerciseId = try c.decodeIfPresent(String.self, forKey: .nextExerciseId)
+        source = try c.decodeIfPresent(String.self, forKey: .source)
+        sourceLicense = try c.decodeIfPresent(String.self, forKey: .sourceLicense)
+        sourceUrl = try c.decodeIfPresent(String.self, forKey: .sourceUrl)
+        links = (try? c.decodeIfPresent([ExerciseLink].self, forKey: .links)) ?? []
+        isCustom = try c.decodeIfPresent(Bool.self, forKey: .isCustom) ?? false
+        archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+    }
+
+    /// Muscles that are not primary (secondary).
+    var musclesSecondary: [String] {
+        musclesPrimary.isEmpty ? [] : muscles.filter { !musclesPrimary.contains($0) }
+    }
 }
 
-struct TrainingPlanSummary: Decodable, Identifiable, Hashable {
-    let id: String
-    let name: String
-    let goal: String
-    let startDate: String?
-    let endDate: String?
-    let weeks: Int?
-    let isActive: Bool
-    let dayCount: Int
-    let updatedAt: String
+/// Body of POST/PUT `/exercises` (`exerciseInputSchema`).
+struct ExerciseInput: Encodable, Equatable {
+    var name = ""
+    var modality = "calisthenics"
+    var category = "push"
+    var muscles: [String] = []
+    var musclesPrimary: [String] = []
+    var equipment: [String] = []
+    var family: String?
+    var difficulty: String?
+    var measurement = "reps"
+    var description = ""
+    var variants: [String] = []
+    var prevExerciseId: String?
+    var nextExerciseId: String?
+    var archived = false
+
+    init() {}
+
+    init(_ e: Exercise) {
+        name = e.name
+        modality = e.modality
+        category = e.category
+        muscles = e.muscles
+        musclesPrimary = e.musclesPrimary
+        equipment = e.equipment
+        family = e.family
+        difficulty = e.difficulty
+        measurement = e.measurement
+        description = e.description
+        variants = e.variants
+        prevExerciseId = e.prevExerciseId
+        nextExerciseId = e.nextExerciseId
+        archived = e.archived
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, modality, category, muscles, musclesPrimary, equipment, family, difficulty
+        case measurement, description, variants, prevExerciseId, nextExerciseId, archived
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name, forKey: .name)
+        try c.encode(modality, forKey: .modality)
+        try c.encode(category, forKey: .category)
+        try c.encode(muscles, forKey: .muscles)
+        try c.encode(musclesPrimary, forKey: .musclesPrimary)
+        try c.encode(equipment, forKey: .equipment)
+        try c.encode(family, forKey: .family)
+        try c.encode(difficulty, forKey: .difficulty)
+        try c.encode(measurement, forKey: .measurement)
+        try c.encode(description, forKey: .description)
+        try c.encode(variants, forKey: .variants)
+        try c.encode(prevExerciseId, forKey: .prevExerciseId)
+        try c.encode(nextExerciseId, forKey: .nextExerciseId)
+        try c.encode(archived, forKey: .archived)
+    }
 }
 
-struct PlanExercise: Codable, Identifiable, Hashable {
-    let id: String
-    var exerciseId: String
-    var variant: String?
-    var targetSets: Int?
-    var targetRepsMin: Int?
-    var targetRepsMax: Int?
-    var targetHoldMin: Double?
-    var targetHoldMax: Double?
-    var targetWeightKg: Double?
-    var targetRpe: Double?
-    var restSeconds: Int?
-    var progressionTarget: String
-    var notes: String
-}
-
-struct PlanDay: Codable, Identifiable, Hashable {
-    let id: String
-    var week: Int?
-    var name: String
-    var notes: String
-    var exercises: [PlanExercise]
-}
-
-struct TrainingPlan: Codable, Identifiable, Hashable {
-    let id: String
-    var name: String
-    var goal: String
-    var notes: String
-    var startDate: String?
-    var endDate: String?
-    var weeks: Int?
-    var isActive: Bool
-    var days: [PlanDay]
-}
+// MARK: Workouts
 
 struct WorkoutSet: Codable, Hashable {
     var isWarmup: Bool = false
@@ -90,101 +157,29 @@ struct WorkoutSet: Codable, Hashable {
     var restSeconds: Int?
     var notes: String = ""
 
-    enum CodingKeys: String, CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case isWarmup, reps, holdSeconds, weightKg, distanceM, durationSeconds
         case assistance, assistanceNote, rpe, rir, restSeconds, notes
     }
-}
 
-struct WorkoutExercise: Codable, Identifiable, Hashable {
-    let id: String
-    var exerciseId: String
-    var planExerciseId: String?
-    var variant: String?
-    var notes: String = ""
-    /// Same id = superset / pair
-    var groupId: String?
-    /// Exercise ids done in order as one set (combo); [] = single exercise
-    var sequence: [String] = []
-    var sets: [WorkoutSet]
+    init() {}
 
-    enum CodingKeys: String, CodingKey {
-        case id, exerciseId, planExerciseId, variant, notes, groupId, sequence, sets
-    }
-}
-
-/// Body of POST/PUT `/workouts` (`workoutInputSchema`).
-struct WorkoutInput: Encodable {
-    /// Client-generated id so a retried save does not duplicate the workout.
-    var id: String = UUID().uuidString.lowercased()
-    /// YYYY-MM-DD
-    var date: String
-    var title: String = ""
-    var categoryId: String?
-    var calendarEntryId: String?
-    var planDayId: String?
-    var durationMin: Int?
-    var rpe: Double?
-    var notes: String = ""
-    var exercises: [WorkoutExercise]
-
-    // Optionals must be sent as explicit `null` (the zod schema requires the keys).
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(id, forKey: .id)
-        try c.encode(date, forKey: .date)
-        try c.encode(title, forKey: .title)
-        try c.encode(categoryId, forKey: .categoryId)
-        try c.encode(calendarEntryId, forKey: .calendarEntryId)
-        try c.encode(planDayId, forKey: .planDayId)
-        try c.encode(durationMin, forKey: .durationMin)
-        try c.encode(rpe, forKey: .rpe)
-        try c.encode(notes, forKey: .notes)
-        try c.encode(exercises, forKey: .exercises)
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isWarmup = try c.decodeIfPresent(Bool.self, forKey: .isWarmup) ?? false
+        reps = try c.decodeIfPresent(Int.self, forKey: .reps)
+        holdSeconds = try c.decodeIfPresent(Double.self, forKey: .holdSeconds)
+        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg)
+        distanceM = try c.decodeIfPresent(Double.self, forKey: .distanceM)
+        durationSeconds = try c.decodeIfPresent(Int.self, forKey: .durationSeconds)
+        assistance = try c.decodeIfPresent(String.self, forKey: .assistance) ?? "none"
+        assistanceNote = try c.decodeIfPresent(String.self, forKey: .assistanceNote) ?? ""
+        rpe = try c.decodeIfPresent(Double.self, forKey: .rpe)
+        rir = try c.decodeIfPresent(Int.self, forKey: .rir)
+        restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case id, date, title, categoryId, calendarEntryId, planDayId, durationMin, rpe, notes, exercises
-    }
-}
-
-struct Workout: Decodable, Identifiable, Hashable {
-    let id: String
-    let date: String
-    let title: String
-    let categoryId: String?
-    let calendarEntryId: String?
-    let planDayId: String?
-    let durationMin: Int?
-    let rpe: Double?
-    let notes: String
-    let exercises: [WorkoutExercise]
-    let createdAt: String
-    let updatedAt: String
-}
-
-struct WorkoutSummary: Decodable, Identifiable, Hashable {
-    let id: String
-    let date: String
-    let title: String
-    let categoryId: String?
-    let calendarEntryId: String?
-    let planDayId: String?
-    let planDayName: String?
-    let planName: String?
-    let durationMin: Int?
-    let rpe: Double?
-    let exerciseCount: Int
-    let setCount: Int
-    let exerciseNames: [String]
-    let exerciseIds: [String]
-    let setNotes: [String]
-}
-
-// The API's zod schemas require nullable keys to be present, so optionals are
-// encoded as explicit `null` instead of being omitted.
-
-extension WorkoutSet {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(isWarmup, forKey: .isWarmup)
@@ -202,7 +197,36 @@ extension WorkoutSet {
     }
 }
 
-extension WorkoutExercise {
+struct WorkoutExercise: Codable, Identifiable, Hashable {
+    var id: String = newId()
+    var exerciseId: String
+    var planExerciseId: String?
+    var variant: String?
+    var notes: String = ""
+    /// Same id = superset / pair
+    var groupId: String?
+    /// Exercise ids done in order as one set (combo); [] = single exercise
+    var sequence: [String] = []
+    var sets: [WorkoutSet] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case id, exerciseId, planExerciseId, variant, notes, groupId, sequence, sets
+    }
+
+    init(exerciseId: String) { self.exerciseId = exerciseId }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        exerciseId = try c.decode(String.self, forKey: .exerciseId)
+        planExerciseId = try c.decodeIfPresent(String.self, forKey: .planExerciseId)
+        variant = try c.decodeIfPresent(String.self, forKey: .variant)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        groupId = try c.decodeIfPresent(String.self, forKey: .groupId)
+        sequence = try c.decodeIfPresent([String].self, forKey: .sequence) ?? []
+        sets = try c.decodeIfPresent([WorkoutSet].self, forKey: .sets) ?? []
+    }
+
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
@@ -215,3 +239,68 @@ extension WorkoutExercise {
         try c.encode(sets, forKey: .sets)
     }
 }
+
+/// Body of POST/PUT `/workouts` (`workoutInputSchema`).
+struct WorkoutInput: Encodable {
+    /// Client-generated id so a retried save does not duplicate the workout.
+    var id: String = newId()
+    /// YYYY-MM-DD
+    var date: String
+    var title: String = ""
+    var categoryId: String?
+    var calendarEntryId: String?
+    var planDayId: String?
+    var durationMin: Int?
+    var rpe: Double?
+    var notes: String = ""
+    var exercises: [WorkoutExercise]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, title, categoryId, calendarEntryId, planDayId, durationMin, rpe, notes, exercises
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(date, forKey: .date)
+        try c.encode(title, forKey: .title)
+        try c.encode(categoryId, forKey: .categoryId)
+        try c.encode(calendarEntryId, forKey: .calendarEntryId)
+        try c.encode(planDayId, forKey: .planDayId)
+        try c.encode(durationMin, forKey: .durationMin)
+        try c.encode(rpe, forKey: .rpe)
+        try c.encode(notes, forKey: .notes)
+        try c.encode(exercises, forKey: .exercises)
+    }
+}
+
+struct Workout: Decodable, Identifiable, Hashable {
+    let id: String
+    let date: String
+    let title: String
+    let categoryId: String?
+    let calendarEntryId: String?
+    let planDayId: String?
+    let durationMin: Int?
+    let rpe: Double?
+    let notes: String
+    let exercises: [WorkoutExercise]
+}
+
+struct WorkoutSummary: Decodable, Identifiable, Hashable {
+    let id: String
+    let date: String
+    let title: String
+    let categoryId: String?
+    let planDayId: String?
+    let planDayName: String?
+    let planName: String?
+    let durationMin: Int?
+    let rpe: Double?
+    let exerciseCount: Int
+    let setCount: Int
+    let exerciseNames: [String]
+}
+
+/// Lowercase UUID used for client-generated ids (max 64 chars on the API).
+func newId() -> String { UUID().uuidString.lowercased() }

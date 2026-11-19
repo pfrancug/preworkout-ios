@@ -113,3 +113,4 @@ final class APIClient: @unchecked Sendable {
 func seg(_ value: String) -> String {
     value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? value
 }
+

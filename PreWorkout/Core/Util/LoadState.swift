@@ -6,6 +6,16 @@ enum LoadState<Value> {
     case loading
     case loaded(Value)
     case failed(String)
+
+    var value: Value? {
+        if case .loaded(let value) = self { return value }
+        return nil
+    }
+
+    var isIdle: Bool {
+        if case .idle = self { return true }
+        return false
+    }
 }
 
 struct LoadStateView<Value, Content: View>: View {
@@ -24,6 +34,7 @@ struct LoadStateView<Value, Content: View>: View {
                 Text(message)
             } actions: {
                 Button("Spróbuj ponownie") { Task { await retry() } }
+                    .buttonStyle(.bordered)
             }
         case .loaded(let value):
             content(value)

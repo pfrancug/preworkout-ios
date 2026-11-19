@@ -27,18 +27,24 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    enum Tab: String {
+        case workouts, exercises, profile
+    }
+
+    /// Survives the re-creation on person switch.
+    @AppStorage("preworkout.tab") private var tab: Tab = .workouts
+
     var body: some View {
-        TabView {
-            DashboardView()
-                .tabItem { Label("Pulpit", systemImage: "house") }
-            DiaryView()
-                .tabItem { Label("Dziennik", systemImage: "book") }
-            TrainingView()
-                .tabItem { Label("Trening", systemImage: "dumbbell") }
-            CalendarView()
-                .tabItem { Label("Kalendarz", systemImage: "calendar") }
-            MoreView()
-                .tabItem { Label("Więcej", systemImage: "ellipsis.circle") }
+        TabView(selection: $tab) {
+            WorkoutsView()
+                .tabItem { Label("Treningi", systemImage: "dumbbell") }
+                .tag(Tab.workouts)
+            ExercisesView()
+                .tabItem { Label("Ćwiczenia", systemImage: "figure.strengthtraining.traditional") }
+                .tag(Tab.exercises)
+            ProfileView()
+                .tabItem { Label("Profil", systemImage: "person.crop.circle") }
+                .tag(Tab.profile)
         }
     }
 }
