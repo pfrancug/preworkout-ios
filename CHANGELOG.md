@@ -2,10 +2,11 @@
 
 ## 0.2.0 (unreleased)
 
-- Tabs reduced to **Workouts**, **Exercises** and **Profile**; dashboard, diary, calendar, plans, calculator and the other screens are hidden for now.
+- Tabs: **Workouts**, **Exercises**, **Calories** and **Profile**; dashboard, diary, calendar, plans and the other screens are hidden for now.
 - Workouts: list grouped by month with pull to refresh and swipe to delete; details; create and edit sessions (date, title, category, duration, session RPE, notes) with exercises and sets (reps, hold, distance / time, added kg, assistance, RPE, RIR, rest, warm-up, notes), reorder and remove exercises.
 - Exercises: library with full-text search (names, aliases, diacritics), filters (type, category, custom, archived), details with muscles, equipment, aliases, progression chain, variants, description and sources; alias editing; create, edit, archive and delete custom exercises.
-- Profile: person switch, name / age / height / sex editing, language shortcut to iOS Settings, server and version info, sign-out.
+- Calories: Mifflin-St Jeor calculator with the web app's math (BMR, TDEE for 6 activity levels, maintenance and −250 / −500 / −1000 kcal plans), prefilled from the profile and the latest diary weight; daily kcal / macro goal with macro suggestion (protein 1.8 g/kg, fat 0.8 g/kg, rest carbs), save and remove; goal history.
+- Profile: header with photo (pick from Photos, stored like on the web) or initials, personal details (name, sex, age, height) with validation, latest weight and BMI, daily goal summary linking to the calculator, person switch; separate Settings screen with the language shortcut to iOS Settings, server, version and sign-out.
 - Full Polish and English translations in a String Catalog; the language follows the iOS per-app language setting (Settings › PreWorkout › Language).
 - Haptic feedback on save and delete; loading, empty and error states on every screen.
 

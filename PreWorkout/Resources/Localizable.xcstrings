@@ -1,6 +1,68 @@
 {
   "sourceLanguage": "pl",
   "strings": {
+    "%@ kcal · B %@ g · T %@ g · W %@ g": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kcal · P %@ g · F %@ g · C %@ g"
+          }
+        }
+      }
+    },
+    "%lld lat": {
+      "localizations": {
+        "pl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld rok"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lata"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lat"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld year"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld years"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld min": {
       "localizations": {
         "en": {
@@ -167,6 +229,16 @@
         }
       }
     },
+    "Aktywny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        }
+      }
+    },
     "Alias": {
       "localizations": {
         "en": {
@@ -247,12 +319,52 @@
         }
       }
     },
+    "BMI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BMI"
+          }
+        }
+      }
+    },
+    "Bardzo aktywny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very active"
+          }
+        }
+      }
+    },
+    "Bez aktywności": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No activity"
+          }
+        }
+      }
+    },
     "Bez asysty": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "No assistance"
+          }
+        }
+      }
+    },
+    "Białko": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protein"
           }
         }
       }
@@ -273,6 +385,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "No aliases"
+          }
+        }
+      }
+    },
+    "Brak celu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No goal"
           }
         }
       }
@@ -333,6 +455,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cardio"
+          }
+        }
+      }
+    },
+    "Cała historia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full history"
+          }
+        }
+      }
+    },
+    "Cel dzienny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily goal"
+          }
+        }
+      }
+    },
+    "Ciało i odżywianie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Body and nutrition"
           }
         }
       }
@@ -407,6 +559,16 @@
         }
       }
     },
+    "Dane osobowe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal details"
+          }
+        }
+      }
+    },
     "Data": {
       "localizations": {
         "en": {
@@ -457,6 +619,16 @@
         }
       }
     },
+    "Dodaj zdjęcie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add photo"
+          }
+        }
+      }
+    },
     "Dodaj ćwiczenie": {
       "localizations": {
         "en": {
@@ -487,6 +659,16 @@
         }
       }
     },
+    "Dotknij planu, aby wpisać jego kalorie do celu dziennego.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a plan to use its calories as the daily goal."
+          }
+        }
+      }
+    },
     "Dystans": {
       "localizations": {
         "en": {
@@ -503,6 +685,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Distance / time"
+          }
+        }
+      }
+    },
+    "Dzienne zapotrzebowanie (TDEE)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily energy expenditure (TDEE)"
+          }
+        }
+      }
+    },
+    "Dzień jest „w celu”, gdy wartość mieści się w ±10% celu. Makro są opcjonalne. Zmiany celu są zapisywane w historii.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A day counts as on target when the value is within ±10% of the goal. Macros are optional. Goal changes are kept in the history."
           }
         }
       }
@@ -557,6 +759,16 @@
         }
       }
     },
+    "Ekstremalna utrata wagi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extreme weight loss"
+          }
+        }
+      }
+    },
     "Elita": {
       "localizations": {
         "en": {
@@ -607,6 +819,16 @@
         }
       }
     },
+    "Historia celu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Goal history"
+          }
+        }
+      }
+    },
     "Imię": {
       "localizations": {
         "en": {
@@ -637,6 +859,16 @@
         }
       }
     },
+    "Intensywne ćwiczenia 6–7 dni w tygodniu, treningi sportowe lub praca fizyczna": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intense exercise 6–7 days a week, sports training or a physical job"
+          }
+        }
+      }
+    },
     "Intensywność": {
       "localizations": {
         "en": {
@@ -663,6 +895,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "How did it go?"
+          }
+        }
+      }
+    },
+    "Jak to jest obliczane?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How is this calculated?"
           }
         }
       }
@@ -707,6 +949,16 @@
         }
       }
     },
+    "Kalorie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calories"
+          }
+        }
+      }
+    },
     "Kategoria": {
       "localizations": {
         "en": {
@@ -733,6 +985,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Female"
+          }
+        }
+      }
+    },
+    "Lekkie lub umiarkowane ćwiczenia 4–5 dni w tygodniu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light to moderate exercise 4–5 days a week"
+          }
+        }
+      }
+    },
+    "Lekkie ćwiczenia 1–3 dni w tygodniu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light exercise 1–3 days a week"
+          }
+        }
+      }
+    },
+    "Lekko aktywny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lightly active"
+          }
+        }
+      }
+    },
+    "Mało lub brak ćwiczeń": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Little or no exercise"
           }
         }
       }
@@ -823,6 +1115,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't load"
+          }
+        }
+      }
+    },
+    "Nie udało się wczytać zdjęcia.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load the photo."
           }
         }
       }
@@ -1000,6 +1302,16 @@
         }
       }
     },
+    "Plany kaloryczne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calorie plans"
+          }
+        }
+      }
+    },
     "Początkujący": {
       "localizations": {
         "en": {
@@ -1026,6 +1338,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter the server address."
+          }
+        }
+      }
+    },
+    "Podstawowa przemiana materii (BMR)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basal metabolic rate (BMR)"
           }
         }
       }
@@ -1090,6 +1412,16 @@
         }
       }
     },
+    "Poziom aktywności": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity level"
+          }
+        }
+      }
+    },
     "PreWorkout": {
       "shouldTranslate": false
     },
@@ -1149,6 +1481,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sex"
+          }
+        }
+      }
+    },
+    "Płeć, wiek i wzrost są używane w kalkulatorze kalorii.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sex, age and height are used by the calorie calculator."
           }
         }
       }
@@ -1239,6 +1581,16 @@
         }
       }
     },
+    "Równanie Mifflin-St Jeor jest uważane za najdokładniejsze do obliczania podstawowej przemiany materii (BMR).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mifflin-St Jeor equation is considered the most accurate for calculating basal metabolic rate (BMR)."
+          }
+        }
+      }
+    },
     "Seria %lld": {
       "localizations": {
         "en": {
@@ -1275,6 +1627,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Session expired, please sign in again."
+          }
+        }
+      }
+    },
+    "Siedzący": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sedentary"
           }
         }
       }
@@ -1319,6 +1681,16 @@
         }
       }
     },
+    "TDEE = BMR × współczynnik aktywności": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TDEE = BMR × activity factor"
+          }
+        }
+      }
+    },
     "Technika, wskazówki (Markdown)": {
       "localizations": {
         "en": {
@@ -1359,12 +1731,12 @@
         }
       }
     },
-    "Treningi i profil dotyczą wybranej osoby.": {
+    "Treningi, profil i cel dotyczą wybranej osoby.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Workouts and profile belong to the selected person."
+            "value": "Workouts, profile and goal belong to the selected person."
           }
         }
       }
@@ -1375,6 +1747,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Harder"
+          }
+        }
+      }
+    },
+    "Twoje dane": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your details"
           }
         }
       }
@@ -1399,12 +1781,72 @@
         }
       }
     },
+    "Tłuszcz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fat"
+          }
+        }
+      }
+    },
+    "Umiarkowane ćwiczenia 6–7 dni w tygodniu lub intensywne 3–4 dni": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moderate exercise 6–7 days a week or intense exercise 3–4 days"
+          }
+        }
+      }
+    },
+    "Umiarkowanie aktywny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moderately active"
+          }
+        }
+      }
+    },
     "Umiejętności": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Skill"
+          }
+        }
+      }
+    },
+    "Ustawienia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "Usunięcie zostanie zapisane w historii celu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The removal is kept in the goal history."
+          }
+        }
+      }
+    },
+    "Usunąć cel dzienny?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the daily goal?"
           }
         }
       }
@@ -1439,12 +1881,62 @@
         }
       }
     },
+    "Usuń cel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove goal"
+          }
+        }
+      }
+    },
     "Usuń ćwiczenie": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Remove exercise"
+          }
+        }
+      }
+    },
+    "Utrata wagi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight loss"
+          }
+        }
+      }
+    },
+    "Utrzymanie wagi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintain weight"
+          }
+        }
+      }
+    },
+    "Waga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight"
+          }
+        }
+      }
+    },
+    "Waga z dziennika: %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight from the diary: %@."
           }
         }
       }
@@ -1465,6 +1957,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Variants"
+          }
+        }
+      }
+    },
+    "Wartość celu może wynosić najwyżej 20 000.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A goal value can be at most 20,000."
           }
         }
       }
@@ -1495,6 +1997,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Age and height must be numbers."
+          }
+        }
+      }
+    },
+    "Wiek musi być w zakresie 1–150.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age must be between 1 and 150."
           }
         }
       }
@@ -1599,6 +2111,26 @@
         }
       }
     },
+    "Wzrost musi być w zakresie 50–300 cm.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Height must be between 50 and 300 cm."
+          }
+        }
+      }
+    },
+    "Węglowodany": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carbs"
+          }
+        }
+      }
+    },
     "Własne": {
       "localizations": {
         "en": {
@@ -1629,6 +2161,16 @@
         }
       }
     },
+    "Zapisany cel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved goal"
+          }
+        }
+      }
+    },
     "Zapisz": {
       "localizations": {
         "en": {
@@ -1639,12 +2181,32 @@
         }
       }
     },
-    "Zapisz profil": {
+    "Zapisz cel": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save profile"
+            "value": "Save goal"
+          }
+        }
+      }
+    },
+    "Zapisz zmiany": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save changes"
+          }
+        }
+      }
+    },
+    "Zaproponuj makro dla %@ kg": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest macros for %@ kg"
           }
         }
       }
@@ -1679,8 +2241,48 @@
         }
       }
     },
+    "Zmień zdjęcie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change photo"
+          }
+        }
+      }
+    },
+    "cel usunięty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "goal removed"
+          }
+        }
+      }
+    },
     "https://…": {
       "shouldTranslate": false
+    },
+    "kcal / dzień": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kcal / day"
+          }
+        }
+      }
+    },
+    "lat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yrs"
+          }
+        }
+      }
     },
     "przerwa %@": {
       "localizations": {
@@ -1784,6 +2386,16 @@
         }
       }
     },
+    "Łagodna utrata wagi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mild weight loss"
+          }
+        }
+      }
+    },
     "Łatwiejsze": {
       "localizations": {
         "en": {
@@ -1819,6 +2431,16 @@
     },
     "•": {
       "shouldTranslate": false
+    },
+    "−%lld kcal deficytu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−%lld kcal deficit"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

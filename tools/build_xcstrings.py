@@ -8,9 +8,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from strings_en import EN, PLURALS, VERBATIM  # noqa: E402
 
-CALLS = r'(?:Text|Label|Button|Section|navigationTitle|TextField|SecureField|Toggle|Picker|LabeledContent|DatePicker|Tag|ContentUnavailableView|confirmationDialog|alert|IntField|DecimalField|chainRow|String\(localized:)'
+CALLS = r'(?:Text|Label|Button|Section|navigationTitle|TextField|SecureField|Toggle|Picker|LabeledContent|DatePicker|Tag|ContentUnavailableView|confirmationDialog|alert|IntField|DecimalField|chainRow|planRow|DisclosureGroup|NavigationLink|String\(localized:)'
 LIT = r'"((?:[^"\\]|\\.|\\\([^)]*(?:\([^)]*\))?[^)]*\))*)"'
-INT_HINTS = ("count", "number", "minutes", "reps", "status")
+# Interpolations whose last identifier is one of these are integers (%lld).
+INT_NAMES = {"count", "number", "minutes", "reps", "deficit", "age", "exercisecount", "setcount", "statuscode"}
 
 
 def to_key(literal: str) -> str:
@@ -22,8 +23,9 @@ def to_key(literal: str) -> str:
             while j < len(literal) and depth:
                 depth += {"(": 1, ")": -1}.get(literal[j], 0)
                 j += 1
-            expr = literal[i + 2:j - 1].lower()
-            out.append("%lld" if any(h in expr for h in INT_HINTS) else "%@")
+            expr = literal[i + 2:j - 1].lower().strip()
+            last = re.split(r"[.\s(]", expr)[-1]
+            out.append("%lld" if last in INT_NAMES else "%@")
             i = j
         else:
             out.append(literal[i])
@@ -40,6 +42,9 @@ def code_keys():
         if f.endswith("Labels.swift"):
             for m in re.finditer(r'return ' + LIT, src):
                 keys.add(to_key(m.group(1)))
+        # LocalizedStringResource fields (e.g. calculator activity levels)
+        for m in re.finditer(r'(?:title|detail): ' + LIT, src):
+            keys.add(to_key(m.group(1)))
         for m in re.finditer(r'Text\(' + LIT + r'\) : Text\(' + LIT + r'\)', src):
             keys.update({to_key(m.group(1)), to_key(m.group(2))})
     return keys

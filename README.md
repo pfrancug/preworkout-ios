@@ -11,7 +11,8 @@ the same data as the web app; there is no separate backend.
 | --- | --- | --- |
 | **Workouts** | Workout log grouped by month, details, create / edit / delete sessions with exercises and sets (reps, hold, distance / time, added kg, assistance, RPE, RIR, rest, warm-up, notes) | Live workout (clock, rest timer, Live Activity), starting a session from a plan day |
 | **Exercises** | Library with full-text search and filters, details (muscles, equipment, aliases, progression chain, variants, description, sources), alias editing, custom exercises: create, edit, archive, delete | Muscle map |
-| **Profile** | Person switch, profile editing, language shortcut, server and version info, sign-out | Preferences |
+| **Calories** | Mifflin-St Jeor calculator (BMR, TDEE, maintenance and deficit plans) prefilled from the profile and the latest weight, daily kcal / macro goal with macro suggestion, goal history | Charts of intake vs. goal |
+| **Profile** | Photo or initials, personal details, latest weight and BMI, daily goal summary, person switch; Settings: language, server, version, sign-out | Preferences |
 
 Dashboard, diary, calendar, training plans and AI features are not in the app yet.
 
@@ -43,7 +44,8 @@ PreWorkout/
     Auth/                    sign-in
     Workouts/                workout list, details, editor
     Exercises/               library, details, editor, aliases
-    Profile/                 profile, person switch, app info
+    Calories/                calorie calculator, daily goal, goal history
+    Profile/                 profile, avatar, person switch, settings
   Resources/                 assets, Localizable.xcstrings, InfoPlist.strings
 tools/build_xcstrings.py     regenerates the String Catalog from tools/strings_en.py
 ```
@@ -95,7 +97,7 @@ secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`, `BUNDLE_I
 ## Roadmap
 
 - **0.1**: sign-in and read-only screens
-- **0.2**: workouts, exercise library and profile with editing; Polish / English
+- **0.2**: workouts, exercise library, calorie calculator and profile with editing; Polish / English
 - **0.3**: live workout with timers, haptics and a Live Activity for the rest timer
 - **0.4**: training plans (list, editor, activation), diary, calendar
 - **0.5**: dashboard charts, offline cache

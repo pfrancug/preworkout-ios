@@ -28,7 +28,7 @@ struct RootView: View {
 
 struct MainTabView: View {
     enum Tab: String {
-        case workouts, exercises, profile
+        case workouts, exercises, calories, profile
     }
 
     /// Survives the re-creation on person switch.
@@ -42,6 +42,9 @@ struct MainTabView: View {
             ExercisesView()
                 .tabItem { Label("Ćwiczenia", systemImage: "figure.strengthtraining.traditional") }
                 .tag(Tab.exercises)
+            CaloriesView()
+                .tabItem { Label("Kalorie", systemImage: "flame") }
+                .tag(Tab.calories)
             ProfileView()
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)

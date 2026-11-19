@@ -33,6 +33,30 @@ extension APIClient {
         try await get(personPath(id) + "/categories")
     }
 
+    // MARK: Nutrition goal + body weight
+
+    func goal(person id: String) async throws -> NutritionGoal? {
+        try await get(personPath(id) + "/goals")
+    }
+
+    /// Versions oldest first (the server orders by `validFrom`).
+    func goalHistory(person id: String) async throws -> [NutritionGoalVersion] {
+        try await get(personPath(id) + "/goals/history")
+    }
+
+    func saveGoal(_ goal: NutritionGoalInput, person id: String) async throws -> NutritionGoal {
+        try await send("PUT", personPath(id) + "/goals", body: goal)
+    }
+
+    /// Latest logged body weight (kg) and its date, from the diary.
+    func latestWeight(person id: String) async throws -> (date: String, kg: Double)? {
+        let rows: [DiaryRow] = try await get(personPath(id) + "/diary")
+        return rows
+            .filter { ($0.weight ?? 0) > 0 }
+            .max { $0.date < $1.date }
+            .map { (String($0.date.prefix(10)), $0.weight ?? 0) }
+    }
+
     // MARK: Workouts
 
     func workouts(person id: String) async throws -> [WorkoutSummary] {
