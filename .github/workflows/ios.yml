@@ -59,6 +59,8 @@ jobs:
             test -f "$APP/$lang.lproj/InfoPlist.strings"
           done
           test -f "$APP/en.lproj/Localizable.strings"
+          test -d "$APP/PlugIns/PreWorkoutLiveActivity.appex"
+          /usr/libexec/PlistBuddy -c 'Print :NSSupportsLiveActivities' "$APP/Info.plist"
           plutil -p "$APP/en.lproj/Localizable.strings" | head -5
           /usr/libexec/PlistBuddy -c 'Print :CFBundleLocalizations' "$APP/Info.plist"
 
@@ -141,7 +143,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             CODE_SIGN_STYLE=Automatic \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            APP_BUNDLE_ID="$BUNDLE_ID" \
             API_BASE_URL="$API_BASE_URL" \
             MARKETING_VERSION="$MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER"

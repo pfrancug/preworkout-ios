@@ -27,6 +27,10 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(ExerciseStore.self) private var exercises
+    @Environment(LiveStore.self) private var live
+
     enum Tab: String {
         case workouts, exercises, calories, profile
     }
@@ -48,6 +52,13 @@ struct MainTabView: View {
             ProfileView()
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
+        }
+        .fullScreenCover(isPresented: Binding(get: { live.presented }, set: { live.presented = $0 })) {
+            LiveWorkoutView()
+        }
+        .task {
+            live.exerciseName = { [exercises] id in exercises.name(id) }
+            await live.load(person: appState.activePersonId)
         }
     }
 }

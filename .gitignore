@@ -2,6 +2,7 @@
 *.xcodeproj/
 *.xcworkspace/
 PreWorkout/Info.plist
+PreWorkoutLiveActivity/Info.plist
 
 # Xcode / build
 build/

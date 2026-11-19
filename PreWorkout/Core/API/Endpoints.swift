@@ -59,6 +59,15 @@ extension APIClient {
 
     // MARK: Workouts
 
+    /// Live workout left in the server drafts table (`workout` / `live-session`); nil when none or unreadable.
+    func liveDraft(person id: String) async throws -> LiveDraft? {
+        try await get(personPath(id) + "/drafts/workout/" + LiveSession.draftKey)
+    }
+
+    func deleteLiveDraft(person id: String) async throws {
+        try await sendNoContent("DELETE", personPath(id) + "/drafts/workout/" + LiveSession.draftKey)
+    }
+
     func workouts(person id: String) async throws -> [WorkoutSummary] {
         try await get(personPath(id) + "/workouts")
     }

@@ -28,6 +28,12 @@ enum DayString {
         return date.formatted(.dateTime.month(.wide).year())
     }
 
+    /// Full weekday and date, e.g. "środa, 18 listopada".
+    static func dayLong(_ day: String) -> String {
+        guard let date = date(from: day) else { return day }
+        return date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    }
+
     /// Weekday + date, e.g. "śr., 18 lis".
     static func short(_ day: String) -> String {
         guard let date = date(from: day) else { return day }

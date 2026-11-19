@@ -1,0 +1,24 @@
+import ActivityKit
+import Foundation
+
+/// Live Activity of a running workout (Lock Screen + Dynamic Island).
+/// Shared by the app and the PreWorkoutLiveActivity widget extension.
+struct WorkoutActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        /// Workout start shifted by the paused time: `Text(timerInterval:)` counts from here.
+        var clockStart: Date
+        /// Elapsed seconds while paused (the clock is frozen); nil = running.
+        var pausedElapsed: Int?
+        /// End of the running rest; nil = no rest.
+        var restEnd: Date?
+        /// Rest seconds left while paused.
+        var restPausedRemaining: Int?
+        /// Current exercise name.
+        var exercise: String
+        /// "Seria 2 z 4" style progress line (already localized by the app).
+        var detail: String
+    }
+
+    /// Workout title or a localized "Workout".
+    var title: String
+}
