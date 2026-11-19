@@ -8,7 +8,7 @@ enum Calculator {
     static let defaultWeight = 75.0
     static let defaultActivity = 1.725
 
-    struct Activity: Identifiable, Hashable {
+    struct Activity: Identifiable {
         let value: Double
         let title: LocalizedStringResource
         let detail: LocalizedStringResource
