@@ -67,6 +67,17 @@ struct CalculatorView: View {
 
     private var savedGoal: NutritionGoal? { goalState.value ?? nil }
 
+    /// Calculator inputs still empty, in form order.
+    private var missingFields: [String] {
+        var missing: [String] = []
+        if data.male == nil { missing.append(String(localized: "płeć")) }
+        if (data.age ?? 0) <= 0 { missing.append(String(localized: "wiek")) }
+        if (data.height ?? 0) <= 0 { missing.append(String(localized: "wzrost")) }
+        if (data.weight ?? 0) <= 0 { missing.append(String(localized: "waga")) }
+        if data.activity == nil { missing.append(String(localized: "poziom aktywności")) }
+        return missing
+    }
+
     var body: some View {
         Form {
             inputSection
@@ -75,9 +86,17 @@ struct CalculatorView: View {
                 plansSection(result)
             } else {
                 Section {
-                    Label("Uzupełnij płeć, wiek, wzrost, wagę i aktywność, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.",
-                          systemImage: "list.bullet.clipboard")
-                        .foregroundStyle(.secondary)
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Brakuje: \(ListFormatter.localizedString(byJoining: missingFields))")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.orange)
+                            Text("Uzupełnij je, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.")
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "list.bullet.clipboard").foregroundStyle(.orange)
+                    }
                 } header: {
                     Text("Plan kaloryczny")
                 }
@@ -449,9 +468,11 @@ struct CalculatorView: View {
         defer { saving = false }
         do {
             let saved = try await APIClient.shared.saveGoal(body, person: appState.activePersonId)
-            let isEmpty = saved.kcal == nil && saved.protein == nil && saved.fat == nil && saved.carbs == nil
-            goalState = .loaded(isEmpty ? nil : saved)
-            data.goal = isEmpty ? nil : saved
+            let current: NutritionGoal? = saved.flatMap { g -> NutritionGoal? in
+                g.kcal == nil && g.protein == nil && g.fat == nil && g.carbs == nil ? nil : g
+            }
+            goalState = .loaded(current)
+            data.goal = current
             data.goalLoaded = true
             goal = body
             self.saved += 1
@@ -478,9 +499,12 @@ private struct ActiveBadge: View {
 }
 
 enum GoalFormat {
-    /// "2 300 kcal · B 140 g · T 60 g · W 290 g" (missing values as "–").
+    /// "2 300 kcal · B 140 g · T 60 g · W 290 g"; only "2 300 kcal" unless all three macros are set.
     static func summary(_ kcal: Double?, _ protein: Double?, _ fat: Double?, _ carbs: Double?) -> String {
         func value(_ v: Double?) -> String { v.map { Calculator.jsRound($0).grouped } ?? "–" }
+        guard let protein, let fat, let carbs, protein > 0, fat > 0, carbs > 0 else {
+            return String(localized: "\(value(kcal)) kcal")
+        }
         return String(localized: "\(value(kcal)) kcal · B \(value(protein)) g · T \(value(fat)) g · W \(value(carbs)) g")
     }
 }

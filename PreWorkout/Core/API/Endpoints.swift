@@ -44,7 +44,8 @@ extension APIClient {
         try await get(personPath(id) + "/goals/history")
     }
 
-    func saveGoal(_ goal: NutritionGoalInput, person id: String) async throws -> NutritionGoal {
+    /// The server answers `null` when the goal was removed (all values nil).
+    func saveGoal(_ goal: NutritionGoalInput, person id: String) async throws -> NutritionGoal? {
         try await send("PUT", personPath(id) + "/goals", body: goal)
     }
 

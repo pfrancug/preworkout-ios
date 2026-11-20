@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "pl",
   "strings": {
+    "%@ kcal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kcal"
+          }
+        }
+      }
+    },
     "%@ kcal · B %@ g · T %@ g · W %@ g": {
       "localizations": {
         "en": {
@@ -448,6 +458,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "No exercises"
+          }
+        }
+      }
+    },
+    "Brakuje: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing: %@"
           }
         }
       }
@@ -2804,12 +2824,12 @@
         }
       }
     },
-    "Uzupełnij płeć, wiek, wzrost, wagę i aktywność, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.": {
+    "Uzupełnij je, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fill in sex, age, height, weight and activity to see your needs and pick a calorie plan."
+            "value": "Fill them in to see your needs and pick a calorie plan."
           }
         }
       }
@@ -3520,6 +3540,16 @@
         }
       }
     },
+    "poziom aktywności": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "activity level"
+          }
+        }
+      }
+    },
     "przerwa %@": {
       "localizations": {
         "en": {
@@ -3530,12 +3560,52 @@
         }
       }
     },
+    "płeć": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sex"
+          }
+        }
+      }
+    },
     "sekundy": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "seconds"
+          }
+        }
+      }
+    },
+    "waga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weight"
+          }
+        }
+      }
+    },
+    "wiek": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age"
+          }
+        }
+      }
+    },
+    "wzrost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "height"
           }
         }
       }

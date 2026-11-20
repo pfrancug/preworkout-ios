@@ -82,6 +82,8 @@ final class APIClient: @unchecked Sendable {
     }
 
     private func decode<T: Decodable>(_ data: Data) throws -> T {
+        // An empty body is read as JSON `null`, so optional results decode to nil.
+        let data = data.isEmpty ? Data("null".utf8) : data
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
