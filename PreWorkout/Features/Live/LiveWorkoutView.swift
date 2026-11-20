@@ -473,7 +473,7 @@ struct LiveWorkoutView: View {
     }
 
     private func restStage(_ session: LiveSession, now: Double) -> some View {
-        let rest = session.rest!
+        let rest = session.rest ?? LiveRest(startedAt: now, durationSec: 0, itemId: "", setIndex: 0)
         let left = rest.remaining(now)
         let over = left <= 0
         let lastIndex = session.exercises.firstIndex { $0.item.id == rest.itemId }
@@ -589,6 +589,7 @@ struct LiveWorkoutView: View {
                     LVPill(action: {
                         live.tap()
                         live.update { s, _ in
+                            guard s.exercises.indices.contains(index) else { return }
                             if s.exercises[index].status == .done || s.exercises[index].status == .skipped { s.reopenExercise(index) }
                             s.exercises[index].plannedSets = max(s.exercises[index].plannedSets, s.exercises[index].item.sets.count) + 1
                         }
@@ -654,11 +655,12 @@ struct LiveWorkoutView: View {
                       icon: allDone ? "flag.checkered" : "arrow.right") {
                 live.tap()
                 if allDone {
-                    if session.exercises[index].isOpen { live.update { s, t in s.finishExercise(index, t) } }
+                    if session.exercises[index].isOpen { live.update { s, t in s.finishExercise(index, t) } }  // finishExercise guards the index
                     requestFinish()
                 } else {
                     forward = true
                     live.update { s, t in
+                        guard s.exercises.indices.contains(index) else { return }
                         if s.exercises[index].isOpen { s.finishExercise(index, t) }
                         else if let n = s.nextOpenIndex(after: index) { s.goTo(n) }
                     }
@@ -682,6 +684,7 @@ struct LiveWorkoutView: View {
                     live.tap()
                     forward = true
                     live.update { s, t in
+                        guard s.exercises.indices.contains(index) else { return }
                         if s.exercises[index].item.sets.isEmpty { s.skipExercise(index) } else { s.finishExercise(index, t) }
                     }
                 }

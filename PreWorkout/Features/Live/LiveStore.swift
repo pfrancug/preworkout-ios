@@ -101,9 +101,16 @@ final class LiveStore {
     /// Bumped after a live workout was saved (the workout list reloads).
     private(set) var savedCount = 0
 
-    func didSave() {
+    /// After the workout was saved: switch to the workout list first, then
+    /// end the session once the live tab is off screen, so the finish screen
+    /// is never re-rendered (or its fields written) without a session.
+    func didSave(sessionId: String) {
         savedCount += 1
-        clear()
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard let self, self.session?.id == sessionId else { return }
+            self.clear()
+        }
     }
 
     func restore(_ snapshot: LiveSession) {

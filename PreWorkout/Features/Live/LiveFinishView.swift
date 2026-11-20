@@ -7,6 +7,8 @@ struct LiveFinishView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var saving = false
+    /// Set once the server has the workout: the screen is on its way out.
+    @State private var done = false
     @State private var error: String?
 
     var body: some View {
@@ -89,8 +91,8 @@ struct LiveFinishView: View {
             }
 
             Section {
-                TextField("Dodaj tytuł", text: binding(\.title))
-                Picker(selection: binding(\.rpe)) {
+                TextField("Dodaj tytuł", text: binding(\.title, ""))
+                Picker(selection: binding(\.rpe, nil)) {
                     Text(verbatim: "–").tag(Double?.none)
                     ForEach(Array(stride(from: 1.0, through: 10.0, by: 0.5)), id: \.self) { value in
                         Text(verbatim: value.short()).tag(Double?.some(value))
@@ -98,7 +100,7 @@ struct LiveFinishView: View {
                 } label: {
                     Text("Jak ciężko było?")
                 }
-                TextField("Notatki (opcjonalnie)", text: binding(\.notes), axis: .vertical)
+                TextField("Notatki (opcjonalnie)", text: binding(\.notes, ""), axis: .vertical)
                     .lineLimit(2...6)
             } footer: {
                 Text("RPE treningu: 1 bardzo lekko, 10 maksymalny wysiłek.")
@@ -119,7 +121,7 @@ struct LiveFinishView: View {
                         Text("Zapisz trening")
                     }
                 }
-                .disabled(saving || stats.sets == 0)
+                .disabled(saving || done || stats.sets == 0)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } footer: {
@@ -137,27 +139,35 @@ struct LiveFinishView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Trenuj dalej") { dismiss() }
-                    .disabled(saving)
+                    .disabled(saving || done)
             }
         }
     }
 
-    private func binding<T>(_ path: WritableKeyPath<LiveSession, T>) -> Binding<T> {
+    /// Never force-unwraps: text fields and pickers can still read or write
+    /// their binding while the screen is being torn down after the session ended.
+    private func binding<T>(_ path: WritableKeyPath<LiveSession, T>, _ fallback: T) -> Binding<T> {
         Binding(
-            get: { live.session![keyPath: path] },
-            set: { value in live.update { s, _ in s[keyPath: path] = value } }
+            get: { live.session?[keyPath: path] ?? fallback },
+            set: { value in
+                guard live.session != nil, !done else { return }
+                live.update { s, _ in s[keyPath: path] = value }
+            }
         )
     }
 
     private func save() async {
-        guard let session = live.session else { return }
+        guard let session = live.session, !saving, !done else { return }
+        // Close the keyboard first so no text field writes back during teardown.
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         saving = true
         error = nil
         defer { saving = false }
         do {
             _ = try await APIClient.shared.createWorkout(session.workoutInput(LiveSession.nowMs), person: appState.activePersonId)
+            done = true
             live.success()
-            live.didSave()
+            live.didSave(sessionId: session.id)
         } catch {
             self.error = error.localizedDescription
         }
