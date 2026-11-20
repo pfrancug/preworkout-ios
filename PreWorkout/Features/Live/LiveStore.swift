@@ -14,7 +14,7 @@ import UserNotifications
 final class LiveStore {
     private(set) var session: LiveSession?
     private(set) var personId: String?
-    /// The full-screen live view is open.
+    /// The live tab is on screen (keeps the display awake while training).
     var presented = false { didSet { updateIdleTimer() } }
 
     var defaultRest: Int {
@@ -60,7 +60,6 @@ final class LiveStore {
         if personId != person {
             personId = person
             session = Self.read(person)
-            presented = false
             afterChange(save: false)
         }
         guard session == nil, !hydrated.contains(person) else { return }
@@ -70,10 +69,13 @@ final class LiveStore {
         afterChange()
     }
 
-    func start() {
+    /// Starts a session, empty or with exercises (e.g. a repeated workout).
+    func start(exercises: [LiveExercise] = [], title: String = "") {
         guard personId != nil else { return }
-        session = LiveSession(date: DayString.today, now: LiveSession.nowMs)
-        presented = true
+        var fresh = LiveSession(date: DayString.today, now: LiveSession.nowMs)
+        fresh.exercises = exercises
+        fresh.title = title
+        session = fresh
         afterChange()
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
@@ -89,7 +91,6 @@ final class LiveStore {
     /// Ends the session (after saving or discarding): removes local and server copies.
     func clear() {
         session = nil
-        presented = false
         afterChange()
         if let personId {
             let api = api

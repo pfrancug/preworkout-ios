@@ -1,45 +1,60 @@
 import SwiftUI
 
-/// Full-screen live workout: clock, current exercise with quick set entry,
-/// rest timer, the exercise queue (supersets / combos) and finishing.
+/// The live workout, built like the web one: dark stage, the clock on top,
+/// one big focal element in the middle (rest ring, set stopwatch or the reps
+/// to do), and one big orb as the only primary action. What is DONE (lime
+/// checks) and what is NOW (glowing "Now: set N") are never on the same chip.
 struct LiveWorkoutView: View {
     @Environment(LiveStore.self) private var live
     @Environment(ExerciseStore.self) private var library
 
+    @State private var sheet: SheetKind?
     @State private var picking = false
     @State private var picked: Exercise?
     @State private var addGroupId: String?
-    @State private var showExtras = false
-    @State private var editing: EditTarget?
-    @State private var pendingRemove: Int?
     @State private var confirmDiscard = false
     @State private var confirmUnfinished = false
     @State private var finishing = false
     @State private var logged = 0
+    @State private var forward = true
+    /// Exercise + set the stopwatch was just stopped for (orb turns into "done").
+    @State private var timedKey: String?
 
-    private struct EditTarget: Identifiable {
-        let index: Int
-        let setIndex: Int
-        var id: String { "\(index)-\(setIndex)" }
+    enum SheetKind: Identifiable {
+        case log(LiveLogSheet.Mode, index: Int, setIndex: Int)
+        case queue
+
+        var id: String {
+            switch self {
+            case let .log(mode, index, setIndex): return "log-\(mode)-\(index)-\(setIndex)"
+            case .queue: return "queue"
+            }
+        }
     }
+
+    private enum Stage: String { case empty, active, rest, complete }
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
                 if let session = live.session {
-                    content(session)
-                } else {
-                    ProgressView()
+                    TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                        screen(session, now: ctx.date.timeIntervalSince1970 * 1000)
+                    }
                 }
             }
-            .toolbar { toolbar }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $finishing) {
-                LiveFinishView()
-            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $finishing) { LiveFinishView() }
         }
+        .preferredColorScheme(.dark)
         .task { await library.loadIfNeeded() }
         .sensoryFeedback(.success, trigger: logged)
+        .sheet(item: $sheet) { kind in
+            switch kind {
+            case let .log(mode, index, setIndex): logSheet(mode, index: index, setIndex: setIndex)
+            case .queue: LiveQueueSheet(onAdd: { group in openAdd(group: group) }, onFinish: requestFinish)
+            }
+        }
         .sheet(isPresented: $picking) {
             ExercisePickerView { exercise in
                 if addGroupId != nil || live.session?.currentExercise == nil {
@@ -62,14 +77,6 @@ struct LiveWorkoutView: View {
         } message: { exercise in
             Text(verbatim: exercise.name)
         }
-        .confirmationDialog(
-            "Usunąć z seriami?",
-            isPresented: Binding(get: { pendingRemove != nil }, set: { if !$0 { pendingRemove = nil } }),
-            titleVisibility: .visible,
-            presenting: pendingRemove
-        ) { index in
-            Button("Usuń", role: .destructive) { live.update { s, _ in s.removeExercise(index) } }
-        }
         .confirmationDialog("Porzucić ten trening?", isPresented: $confirmDiscard, titleVisibility: .visible) {
             Button("Porzuć trening", role: .destructive) { live.clear() }
         } message: {
@@ -88,125 +95,190 @@ struct LiveWorkoutView: View {
         } message: {
             Text("Niedokończone ćwiczenia: \(live.session?.incomplete.count ?? 0)")
         }
-        .sheet(item: $editing) { target in
-            if let e = live.session?.exercises[safe: target.index], let set = e.item.sets[safe: target.setIndex] {
-                LiveSetEditor(
-                    title: live.name(of: e),
-                    setNumber: target.setIndex + 1,
-                    measurement: measurement(e),
-                    set: set,
-                    onSave: { value in live.update { s, _ in s.updateSet(target.index, target.setIndex, value) } },
-                    onDelete: { live.update { s, _ in s.deleteSet(target.index, target.setIndex) } }
-                )
-            }
+    }
+
+    // MARK: Layout
+
+    private func stage(_ session: LiveSession) -> Stage {
+        guard let e = session.currentExercise else { return .empty }
+        if session.rest != nil { return .rest }
+        let closed = e.status == .done || e.status == .skipped
+        if closed || (e.plannedSets > 0 && e.item.sets.count >= e.plannedSets) { return .complete }
+        return .active
+    }
+
+    private func mood(_ session: LiveSession, _ stage: Stage) -> LiveMood {
+        if session.isPaused { return .paused }
+        switch stage {
+        case .rest: return .rest
+        case .complete: return .done
+        default: return .active
         }
     }
 
-    // MARK: Toolbar
-
-    @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button("Zwiń (trening trwa dalej)", systemImage: "chevron.down") { live.presented = false }
-        }
-        ToolbarItem(placement: .principal) {
-            if let session = live.session {
-                TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    VStack(spacing: 0) {
-                        Text(verbatim: Clock.elapsed(session.elapsedMs(LiveSession.nowMs)))
-                            .font(.headline.monospacedDigit())
-                        if session.isPaused {
-                            Text("Pauza").font(.caption2).foregroundStyle(.orange)
-                        }
+    private func screen(_ session: LiveSession, now: Double) -> some View {
+        let st = stage(session)
+        let md = mood(session, st)
+        let key = "\(st.rawValue)-\(session.currentExercise?.id ?? "")-\(session.rest?.startedAt ?? 0)"
+        return ZStack {
+            LiveAmbient(mood: md)
+            VStack(spacing: 0) {
+                header(session, now: now, mood: md)
+                Group {
+                    switch st {
+                    case .empty: emptyStage
+                    case .active: activeStage(session, now: now, mood: md)
+                    case .rest: restStage(session, now: now)
+                    case .complete: completeStage(session)
                     }
                 }
+                .frame(maxWidth: 460, maxHeight: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .id(key)
+                .transition(.asymmetric(
+                    insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                    removal: .opacity
+                ))
+                .contentShape(Rectangle())
+                .gesture(browseGesture(session))
+                dock(session, stage: st, now: now, mood: md)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
             }
+            .animation(LV.spring, value: key)
+            if session.isPaused { pausedOverlay(session, now: now) }
         }
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            if let session = live.session {
+        .foregroundStyle(LV.text)
+    }
+
+    /// Horizontal swipe on the stage browses exercises.
+    private func browseGesture(_ session: LiveSession) -> some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { g in
+                guard abs(g.translation.width) > 80, abs(g.translation.width) > abs(g.translation.height) * 1.5 else { return }
+                let target = session.current + (g.translation.width < 0 ? 1 : -1)
+                guard session.exercises.indices.contains(target) else { return }
+                forward = g.translation.width < 0
+                live.tap()
+                live.update { s, _ in s.goTo(target) }
+            }
+    }
+
+    // MARK: Header: add · clock (tap = pause) · menu, then exercise progress
+
+    private func header(_ session: LiveSession, now: Double, mood: LiveMood) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                LVIconButton(icon: "plus", label: "Dodaj ćwiczenie") { openAdd() }
+                Spacer()
                 Button {
                     live.tap()
-                    live.update { s, now in
-                        if session.isPaused { s.resume(now) } else { s.pause(now) }
-                    }
+                    live.update { s, t in if s.isPaused { s.resume(t) } else { s.pause(t) } }
                 } label: {
-                    if session.isPaused {
-                        Label("Wznów", systemImage: "play.fill")
-                    } else {
-                        Label("Pauza", systemImage: "pause.fill")
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(session.isPaused ? LV.gold : LV.danger)
+                            .frame(width: 8, height: 8)
+                            .shadow(color: session.isPaused ? .clear : LV.danger, radius: 4)
+                            .opacity(session.isPaused || Int(now / 1000) % 2 == 0 ? 1 : 0.35)
+                        Text(verbatim: Clock.elapsed(session.elapsedMs(now)))
+                            .font(.system(size: 19, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                        Image(systemName: session.isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 12))
+                            .opacity(session.isPaused ? 1 : 0.6)
                     }
+                    .padding(.horizontal, 18)
+                    .frame(height: 44)
+                    .lvGlass(Capsule())
                 }
+                .buttonStyle(LVPress(scale: 0.95))
+                .accessibilityLabel(session.isPaused ? Text("Wznów") : Text("Pauza"))
+                Spacer()
+                menu(session)
             }
-            Menu {
-                settingsMenu
-                Divider()
-                Button("Porzuć trening", systemImage: "trash", role: .destructive) { confirmDiscard = true }
-            } label: {
-                Label("Menu treningu", systemImage: "ellipsis.circle")
+            if !session.exercises.isEmpty {
+                LVSegments(session: session, mood: mood)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
     }
 
-    @ViewBuilder
-    private var settingsMenu: some View {
+    private func menu(_ session: LiveSession) -> some View {
         @Bindable var store = live
-        Picker(selection: $store.defaultRest) {
-            ForEach([30, 45, 60, 75, 90, 120, 150, 180, 240, 300], id: \.self) { seconds in
-                Text(verbatim: Clock.text(Double(seconds))).tag(seconds)
-            }
-        } label: {
-            Label("Domyślna przerwa", systemImage: "timer")
-        }
-        .pickerStyle(.menu)
-        Toggle(isOn: $store.haptics) { Label("Wibracje", systemImage: "iphone.radiowaves.left.and.right") }
-        Toggle(isOn: $store.sound) { Label("Dźwięk na koniec przerwy", systemImage: "speaker.wave.2") }
-    }
-
-    // MARK: Content
-
-    private func content(_ session: LiveSession) -> some View {
-        List {
-            if session.isPaused {
-                Section {
-                    Label("Pauza: zegar treningu i przerwa są zatrzymane.", systemImage: "pause.circle")
-                        .foregroundStyle(.orange)
-                }
-            }
-            if let rest = session.rest {
-                RestSection(rest: rest, session: session)
-            }
-            if session.exercises.isEmpty {
-                Section {
-                    ContentUnavailableView {
-                        Label("Brak ćwiczeń", systemImage: "figure.strengthtraining.traditional")
-                    } description: {
-                        Text("Dodawaj ćwiczenia na bieżąco: wyszukiwarka wybacza literówki.")
-                    } actions: {
-                        Button("Dodaj ćwiczenie", systemImage: "plus") { openAdd() }
-                            .buttonStyle(.borderedProminent)
+        return Menu {
+            Button("Zakończ trening", systemImage: "flag.checkered") { requestFinish() }
+            Button("Lista ćwiczeń", systemImage: "list.number") { sheet = .queue }
+            if let e = session.currentExercise {
+                let index = session.current
+                Picker(selection: Binding(
+                    get: { e.restSeconds },
+                    set: { v in live.update { s, _ in if s.exercises.indices.contains(index) { s.exercises[index].restSeconds = v } } }
+                )) {
+                    ForEach(Self.restChoices(including: e.restSeconds), id: \.self) { sec in
+                        Text(verbatim: Clock.text(Double(sec))).tag(sec)
                     }
-                }
-            } else if let e = session.currentExercise {
-                currentSection(session, e)
-                if !e.item.sets.isEmpty { loggedSection(session, e) }
-                queueSection(session)
-            }
-            Section {
-                Button {
-                    requestFinish(session)
                 } label: {
-                    Label("Zakończ trening", systemImage: "flag.checkered")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
+                    Label("Przerwa w tym ćwiczeniu", systemImage: "timer")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                .pickerStyle(.menu)
+            }
+            Divider()
+            Picker(selection: $store.defaultRest) {
+                ForEach([30, 45, 60, 75, 90, 120, 150, 180, 240, 300], id: \.self) { sec in
+                    Text(verbatim: Clock.text(Double(sec))).tag(sec)
+                }
+            } label: {
+                Label("Domyślna przerwa", systemImage: "timer")
+            }
+            .pickerStyle(.menu)
+            Toggle(isOn: $store.haptics) { Label("Wibracje", systemImage: "iphone.radiowaves.left.and.right") }
+            Toggle(isOn: $store.sound) { Label("Dźwięk na koniec przerwy", systemImage: "speaker.wave.2") }
+            Divider()
+            Button("Porzuć trening", systemImage: "trash", role: .destructive) { confirmDiscard = true }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .lvGlass(Circle())
+        }
+        .accessibilityLabel(Text("Menu treningu"))
+    }
+
+    private static func restChoices(including current: Int) -> [Int] {
+        Array(Set([0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300, current])).sorted()
+    }
+
+    // MARK: Exercise title
+
+    private func title(_ session: LiveSession, _ e: LiveExercise, index: Int) -> some View {
+        let n = index + 1
+        let total = session.exercises.count
+        return VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Text("Ćwiczenie \(n) z \(total)").lvCaps()
+                if let g = e.item.groupId, let label = session.groupLabels[g] {
+                    LVBadge(text: Text("Superseria \(label)"), colors: [LV.violet, LV.flame])
+                }
+                if e.item.sequence.count > 1 {
+                    LVBadge(text: Text("Combo"), colors: [LV.ice, LV.violet])
+                }
+            }
+            Text(verbatim: live.name(of: e))
+                .font(.system(size: e.item.sequence.count > 1 ? 24 : 28, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .minimumScaleFactor(0.7)
+            if let variant = e.item.variant, !variant.isEmpty {
+                Text(verbatim: variant).font(.system(size: 15)).foregroundStyle(LV.muted)
             }
         }
-        .listSectionSpacing(.compact)
+        .frame(maxWidth: .infinity)
     }
+
+    // MARK: Active: NOW set N, hero, DONE strip
 
     private func measurement(_ e: LiveExercise) -> String {
         library.byId[e.countedExerciseId]?.measurement ?? "reps"
@@ -216,232 +288,522 @@ struct LiveWorkoutView: View {
         switch measurement(e) {
         case "hold": return .hold
         case "distance_time": return .duration
-        default: return e.pending.durationSeconds != nil ? .duration : nil
+        default: return nil
         }
     }
 
-    @ViewBuilder
-    private func currentSection(_ session: LiveSession, _ e: LiveExercise) -> some View {
-        let index = session.current
-        let done = e.item.sets.count
-        let planned = max(e.plannedSets, done)
-        let closed = e.status == .done || e.status == .skipped
-        let n = index + 1
-        let total = session.exercises.count
-        let setNumber = min(done + 1, planned + (closed ? 0 : 1))
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    if let g = e.item.groupId, let label = session.groupLabels[g] {
-                        Tag("Superseria \(label)", color: .purple)
-                    }
-                    if e.item.sequence.count > 1 { Tag("Combo", color: .teal) }
-                    Spacer()
-                    Text("Ćwiczenie \(n) z \(total)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text(verbatim: live.name(of: e))
-                    .font(.title2.bold())
-                ProgressView(value: Double(min(done, planned)), total: Double(max(planned, 1)))
-                    .tint(closed ? .green : .accentColor)
-                HStack {
-                    Text("Seria \(setNumber) z \(planned)")
-                    if let last = e.item.sets.last {
-                        Text(verbatim: "·")
-                        Text("ostatnio \(LiveFormat.set(last))")
-                    }
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                if let target = LiveFormat.target(e.target) {
-                    Label { Text(verbatim: target) } icon: { Image(systemName: "scope") }
-                        .font(.subheadline)
-                }
-            }
-            .padding(.vertical, 4)
-
-            if closed {
-                if e.status == .done {
-                    Label("Ćwiczenie ukończone", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    Label("Pominięte", systemImage: "forward.fill")
-                        .foregroundStyle(.secondary)
-                }
-                Button("Wróć do niego", systemImage: "arrow.uturn.backward") {
-                    live.update { s, _ in s.reopenExercise(index) }
-                }
-                if let next = session.nextOpenIndex(after: index) {
-                    Button("Następne ćwiczenie", systemImage: "arrow.right") {
-                        live.update { s, _ in s.goTo(next) }
-                    }
-                }
-            } else {
-                entryRows(session, e, index: index, done: done, planned: planned)
-            }
-        }
+    private func holdTarget(_ e: LiveExercise) -> Double? {
+        e.target?["targetHoldMax"] ?? e.target?["targetHoldMin"] ?? e.pending.holdSeconds
     }
 
-    @ViewBuilder
-    private func entryRows(_ session: LiveSession, _ e: LiveExercise, index: Int, done: Int, planned: Int) -> some View {
-        let pending = Binding(
+    private func pendingBinding(_ index: Int) -> Binding<WorkoutSet> {
+        Binding(
             get: { live.session?.exercises[safe: index]?.pending ?? WorkoutSet() },
-            set: { value in live.update { s, _ in if s.exercises.indices.contains(index) { s.exercises[index].pending = value } } }
+            set: { v in live.update { s, _ in if s.exercises.indices.contains(index) { s.exercises[index].pending = v } } }
         )
-        let field = timerField(e)
-        if let field {
-            SetTimerRow(session: session, exercise: e, field: field)
-        }
-        SetFieldsView(measurement: measurement(e), set: pending, showExtras: showExtras)
-        Button {
-            withAnimation { showExtras.toggle() }
-        } label: {
-            if showExtras {
-                Label("Mniej", systemImage: "chevron.up")
-            } else {
-                Label("Ciężar, RPE, notatka", systemImage: "slider.horizontal.3")
-            }
-        }
-        .font(.subheadline)
-
-        Button {
-            live.update { s, now in
-                if let field, s.setTimer != nil { s.stopSetTimer(now, field: field) }
-                s.logSet(now)
-            }
-            logged += 1
-        } label: {
-            Label("Zapisz serię \(done + 1)", systemImage: "checkmark")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-        }
-        .buttonStyle(.borderedProminent)
-
-        HStack {
-            if let last = e.item.sets.last {
-                Button("Kopiuj poprzednią", systemImage: "doc.on.doc") {
-                    live.tap()
-                    var copy = last
-                    copy.restSeconds = nil
-                    copy.notes = ""
-                    pending.wrappedValue = copy
-                }
-            }
-            Spacer()
-            if done > 0 && done >= e.plannedSets {
-                Button("Jeszcze seria", systemImage: "plus") {
-                    live.update { s, _ in s.exercises[index].plannedSets = max(s.exercises[index].plannedSets, done) + 1 }
-                }
-            }
-        }
-        .buttonStyle(.borderless)
-        .font(.subheadline)
-
-        HStack {
-            if done > 0 {
-                Button("Zakończ ćwiczenie", systemImage: "checkmark.circle") {
-                    live.tap()
-                    live.update { s, now in s.finishExercise(index, now) }
-                }
-            } else {
-                Button("Pomiń", systemImage: "forward") {
-                    live.tap()
-                    live.update { s, _ in s.skipExercise(index) }
-                }
-            }
-            Spacer()
-            RestSettingControl(index: index, seconds: e.restSeconds)
-        }
-        .buttonStyle(.borderless)
-        .font(.subheadline)
     }
 
-    private func loggedSection(_ session: LiveSession, _ e: LiveExercise) -> some View {
+    private func activeStage(_ session: LiveSession, now: Double, mood: LiveMood) -> some View {
         let index = session.current
-        return Section("Zapisane serie") {
-            ForEach(Array(e.item.sets.enumerated()), id: \.offset) { setIndex, set in
-                Button {
-                    editing = EditTarget(index: index, setIndex: setIndex)
-                } label: {
-                    HStack {
-                        Text("Seria \(setIndex + 1)")
-                            .foregroundStyle(.secondary)
-                        if set.isWarmup { Tag("Rozgrzewka", color: .orange) }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(verbatim: LiveFormat.set(set))
-                            if let rest = set.restSeconds {
-                                Text("przerwa \(Clock.text(Double(rest)))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+        let e = session.exercises[index]
+        let done = e.item.sets.count
+        let planned = max(e.plannedSets, done + 1)
+        let setNumber = done + 1
+        return VStack(spacing: 0) {
+            title(session, e, index: index)
+            Spacer(minLength: 16)
+            VStack(spacing: 18) {
+                // NOW: the set you are about to do. Never shows a logged set.
+                HStack(spacing: 8) {
+                    Circle().fill(mood.glow).frame(width: 8, height: 8).shadow(color: mood.glow, radius: 4)
+                    Text("Teraz: seria \(setNumber) z \(planned)")
+                        .font(.system(size: 14, weight: .heavy))
+                        .tracking(1.2)
+                        .textCase(.uppercase)
+                }
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+                .background(mood.glow.opacity(0.16), in: Capsule())
+                .overlay(Capsule().stroke(mood.glow.opacity(0.5), lineWidth: 1))
+                hero(session, e, index: index, now: now)
+                if let target = LiveFormat.target(e.target) {
+                    Label { Text("Cel: \(target)") } icon: { Image(systemName: "scope") }
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LV.faint)
+                }
+            }
+            Spacer(minLength: 16)
+            doneStrip(e, index: index, planned: planned, mood: mood)
+        }
+    }
+
+    @ViewBuilder
+    private func hero(_ session: LiveSession, _ e: LiveExercise, index: Int, now: Double) -> some View {
+        let pending = pendingBinding(index)
+        if let field = timerField(e) {
+            let running = session.setTimer
+            let target = field == .hold ? holdTarget(e) : nil
+            let recorded: Double? = field == .hold ? e.pending.holdSeconds : e.pending.durationSeconds.map(Double.init)
+            let sec = running?.elapsed(now) ?? 0
+            let reached = running != nil && target.map { sec >= $0 } == true
+            let progress: Double = running == nil ? (timedKey == stopKey(e) ? 1 : 0) : target.map { sec / max($0, 1) } ?? sec.truncatingRemainder(dividingBy: 60) / 60
+            VStack(spacing: 14) {
+                LVRing(size: 240, stroke: 12, progress: reached ? 1 : progress,
+                       from: reached || timedKey == stopKey(e) ? LV.lime : LV.gold,
+                       to: reached || timedKey == stopKey(e) ? LV.sky : LV.flame) {
+                    Group {
+                        if running != nil {
+                            if reached { Text("Cel osiągnięty") } else if field == .hold { Text("Trzymasz") } else { Text("Trwa") }
+                        } else if timedKey == stopKey(e) {
+                            Text("Twój czas")
+                        } else if field == .hold {
+                            Text("Cel utrzymania")
+                        } else {
+                            Text("Na czas")
+                        }
+                    }
+                    .lvCaps()
+                    Text(verbatim: Clock.text(running != nil ? sec.rounded(.down) : (recorded ?? target ?? 0)))
+                        .font(.system(size: 64, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .foregroundStyle(reached ? AnyShapeStyle(LV.lime) : AnyShapeStyle(LV.text))
+                        .padding(.top, 2)
+                    if running != nil, let target {
+                        Text(verbatim: "/ \(Clock.text(target))").font(.system(size: 14)).foregroundStyle(LV.muted).monospacedDigit()
+                    }
+                }
+                if running == nil {
+                    HStack(spacing: 10) {
+                        ForEach(SetField.primary(measurement(e)).filter { $0 != .hold && $0 != .duration }) { f in
+                            LVInlineStepper(field: f, set: pending)
+                        }
+                        if measurement(e) == "hold" && (e.pending.weightKg ?? 0) > 0 {
+                            LVInlineStepper(field: .weight, set: pending)
                         }
                     }
                 }
-                .tint(.primary)
-                .swipeActions {
-                    Button("Usuń", systemImage: "trash", role: .destructive) {
-                        live.update { s, _ in s.deleteSet(index, setIndex) }
+            }
+        } else {
+            let primary = SetField.primary(measurement(e))
+            let main = primary.first ?? .reps
+            VStack(spacing: 16) {
+                HStack(alignment: .center, spacing: 18) {
+                    LVStepButton(up: false, size: 54, disabled: (main.get(e.pending) ?? 0) <= main.range.lowerBound) {
+                        withAnimation(.snappy) { main.bump(&pending.wrappedValue, up: false) }
+                    }
+                    Button {
+                        sheet = .log(.pending, index: index, setIndex: e.item.sets.count)
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(verbatim: main.display(main.get(e.pending)))
+                                .font(.system(size: 132, weight: .black, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(LV.heroGradient)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.4)
+                                .contentTransition(.numericText())
+                                .background(
+                                    Circle().fill(RadialGradient(colors: [LV.ember.opacity(0.35), .clear], center: .center, startRadius: 0, endRadius: 120))
+                                        .frame(width: 240, height: 240)
+                                        .blur(radius: 20)
+                                )
+                            if let unit = main.unit {
+                                Text(unit).lvCaps()
+                            }
+                        }
+                        .frame(minWidth: 150)
+                    }
+                    .buttonStyle(LVPress(scale: 0.96))
+                    .accessibilityLabel(Text("Zmień wartości serii"))
+                    LVStepButton(up: true, size: 54, disabled: (main.get(e.pending) ?? 0) >= main.range.upperBound) {
+                        withAnimation(.snappy) { main.bump(&pending.wrappedValue, up: true) }
+                    }
+                }
+                .sensoryFeedback(.selection, trigger: main.get(e.pending))
+                let secondary: [SetField] = Array(primary.dropFirst()) + ((e.pending.weightKg ?? 0) > 0 && !primary.contains(.weight) ? [SetField.weight] : [])
+                if !secondary.isEmpty {
+                    HStack(spacing: 10) {
+                        ForEach(secondary) { f in LVInlineStepper(field: f, set: pending) }
                     }
                 }
             }
         }
     }
 
-    private func queueSection(_ session: LiveSession) -> some View {
-        let labels = session.groupLabels
-        return Section {
-            ForEach(Array(session.exercises.enumerated()), id: \.element.id) { index, e in
-                QueueRow(
-                    exercise: e,
-                    name: live.name(of: e),
-                    groupLabel: e.item.groupId.flatMap { labels[$0] },
-                    isCurrent: index == session.current
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    live.tap()
-                    live.update { s, _ in s.goTo(index) }
-                }
-                .swipeActions(edge: .trailing) {
-                    Button("Usuń", systemImage: "trash") { pendingRemove = index }
-                        .tint(.red)
-                    if e.isOpen {
-                        Button("Pomiń", systemImage: "forward") { live.update { s, _ in s.skipExercise(index) } }
-                    } else {
-                        Button("Wróć do niego", systemImage: "arrow.uturn.backward") { live.update { s, _ in s.reopenExercise(index) } }
+    /// DONE: logged sets of this exercise as lime-checked chips (tap = fix).
+    private func doneStrip(_ e: LiveExercise, index: Int, planned: Int, mood: LiveMood) -> some View {
+        VStack(spacing: 10) {
+            LVDots(done: e.item.sets.count, total: planned, mood: mood)
+            if e.item.sets.isEmpty {
+                Text("Jeszcze nic nie zrobione").font(.system(size: 13)).foregroundStyle(LV.faint)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Zrobione").lvCaps(LV.lime.opacity(0.85))
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(e.item.sets.enumerated()), id: \.offset) { setIndex, set in
+                                    DoneChip(number: setIndex + 1, text: LiveFormat.set(set), warmup: set.isWarmup) {
+                                        sheet = .log(.edit, index: index, setIndex: setIndex)
+                                    }
+                                    .id(setIndex)
+                                }
+                            }
+                        }
+                        .onAppear { proxy.scrollTo(e.item.sets.count - 1, anchor: .trailing) }
                     }
                 }
-                .contextMenu {
-                    Button("Wyżej", systemImage: "arrow.up") { live.update { s, _ in s.moveExercise(index, by: -1) } }
-                        .disabled(index == 0)
-                    Button("Niżej", systemImage: "arrow.down") { live.update { s, _ in s.moveExercise(index, by: 1) } }
-                        .disabled(index == session.exercises.count - 1)
-                    if let g = e.item.groupId {
-                        Button("Dodaj do superserii", systemImage: "plus.rectangle.on.rectangle") { openAdd(group: g) }
-                        Button("Wyłącz z superserii", systemImage: "rectangle.badge.minus") { live.update { s, _ in s.ungroup(index) } }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.bottom, 6)
+    }
+
+    // MARK: Rest: DONE chip on top, countdown ring, then what's NEXT
+
+    private func upNext(_ session: LiveSession) -> (LiveExercise, Int)? {
+        if let e = session.currentExercise, e.isOpen, e.item.sets.count < max(e.plannedSets, 1) {
+            return (e, e.item.sets.count + 1)
+        }
+        if let i = session.nextOpenIndex(after: session.current) {
+            return (session.exercises[i], session.exercises[i].item.sets.count + 1)
+        }
+        return nil
+    }
+
+    private func restStage(_ session: LiveSession, now: Double) -> some View {
+        let rest = session.rest!
+        let left = rest.remaining(now)
+        let over = left <= 0
+        let lastIndex = session.exercises.firstIndex { $0.item.id == rest.itemId }
+        let lastSet = lastIndex.flatMap { session.exercises[$0].item.sets[safe: rest.setIndex] }
+        return VStack(spacing: 0) {
+            if let lastIndex, let lastSet {
+                let setNumber = rest.setIndex + 1
+                Button {
+                    sheet = .log(.edit, index: lastIndex, setIndex: rest.setIndex)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(.black)
+                            .frame(width: 28, height: 28)
+                            .background(LV.lime, in: Circle())
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Seria \(setNumber) zrobiona").font(.system(size: 13, weight: .bold)).foregroundStyle(LV.lime)
+                            Text(verbatim: "\(live.name(of: session.exercises[lastIndex])) · \(LiveFormat.set(lastSet))")
+                                .font(.system(size: 13)).foregroundStyle(LV.muted).lineLimit(1)
+                        }
+                        Spacer(minLength: 4)
+                        Text("Popraw").font(.system(size: 13, weight: .semibold)).foregroundStyle(LV.muted)
                     }
-                    if e.item.sequence.count > 1 {
-                        Button("Rozdziel combo", systemImage: "scissors") { live.update { s, _ in s.splitCombo(index) } }
+                    .padding(.leading, 8)
+                    .padding(.trailing, 16)
+                    .frame(height: 54)
+                    .lvGlass(Capsule())
+                }
+                .buttonStyle(LVPress(scale: 0.97))
+            }
+            Spacer(minLength: 12)
+            VStack(spacing: 18) {
+                LVRing(size: 280, stroke: 16, progress: over ? 1 : left / max(1, rest.durationSec),
+                       from: over ? LV.ember : LV.ice, to: over ? LV.flame : LV.violet) {
+                    Group {
+                        if over { Text("Czas start") } else if rest.pausedRemaining != nil { Text("Przerwa (pauza)") } else { Text("Przerwa") }
                     }
-                    Button("Usuń", systemImage: "trash", role: .destructive) { pendingRemove = index }
+                    .lvCaps(over ? LV.gold : LV.muted)
+                    Text(verbatim: Clock.text(left))
+                        .font(.system(size: 84, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
+                        .foregroundStyle(over ? LV.gold : LV.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(verbatim: "/ \(Clock.text(rest.durationSec))")
+                        .font(.system(size: 14)).foregroundStyle(LV.muted).monospacedDigit()
+                }
+                .scaleEffect(over && Int(now / 1000) % 2 == 0 ? 1.02 : 1)
+                .animation(.easeInOut(duration: 0.5), value: Int(now / 1000))
+                HStack(spacing: 12) {
+                    LVPill(action: { live.tap(); live.update { s, t in s.adjustRest(by: -LiveSession.restStep, t) } }) {
+                        Text(verbatim: "−15").monospacedDigit().frame(width: 48)
+                    }
+                    .accessibilityLabel(Text("Przerwa krótsza o 15 sekund"))
+                    LVPill(action: { live.tap(); live.update { s, t in s.adjustRest(by: LiveSession.restStep, t) } }) {
+                        Text(verbatim: "+15").monospacedDigit().frame(width: 48)
+                    }
+                    .accessibilityLabel(Text("Przerwa dłuższa o 15 sekund"))
                 }
             }
-            Button("Dodaj ćwiczenie", systemImage: "plus") { openAdd() }
-        } header: {
-            Text("Trening")
-        } footer: {
-            Text("Dotknij, aby przejść. Przytrzymaj, aby zmienić kolejność lub superserię.")
+            Spacer(minLength: 12)
+            if let next = upNext(session) {
+                let (e, setNo) = next
+                NextCard(
+                    caption: Text("Następnie"),
+                    name: live.name(of: e),
+                    detail: [String(localized: "Seria \(setNo) z \(max(e.plannedSets, setNo))"), LiveFormat.pendingText(e)].compactMap { $0 }.joined(separator: " · ")
+                )
+            }
         }
+    }
+
+    // MARK: Complete / empty
+
+    private func completeStage(_ session: LiveSession) -> some View {
+        let index = session.current
+        let e = session.exercises[index]
+        let allDone = session.nextOpenIndex(after: index) == nil
+        let sets = e.item.sets
+        let count = sets.count
+        let reps = sets.reduce(0) { $0 + ($1.reps ?? 0) }
+        let best = sets.compactMap(\.weightKg).max() ?? 0
+        return VStack(spacing: 0) {
+            Spacer()
+            VStack(spacing: 0) {
+                Image(systemName: allDone ? "flag.checkered" : "checkmark")
+                    .font(.system(size: 48, weight: .heavy))
+                    .foregroundStyle(.black)
+                    .frame(width: 112, height: 112)
+                    .background(LiveMood.done.cta, in: Circle())
+                    .shadow(color: LV.lime.opacity(0.6), radius: 40)
+                Group {
+                    if allDone { Text("Wszystko zrobione") } else if e.status == .skipped { Text("Pominięte") } else { Text("Ćwiczenie ukończone") }
+                }
+                .lvCaps()
+                .padding(.top, 24)
+                Text(verbatim: live.name(of: e))
+                    .font(.system(size: 30, weight: .heavy))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+                if count > 0 {
+                    HStack(spacing: 6) {
+                        Text("\(count) serii")
+                        if reps > 0 { Text(verbatim: "· \(reps)"); Text("powt.") }
+                        if best > 0 { Text(verbatim: "· +\(best.short(2)) kg") }
+                    }
+                    .font(.system(size: 15)).foregroundStyle(LV.muted).monospacedDigit()
+                    .padding(.top, 8)
+                }
+                HStack(spacing: 10) {
+                    LVPill(action: {
+                        live.tap()
+                        live.update { s, _ in
+                            if s.exercises[index].status == .done || s.exercises[index].status == .skipped { s.reopenExercise(index) }
+                            s.exercises[index].plannedSets = max(s.exercises[index].plannedSets, s.exercises[index].item.sets.count) + 1
+                        }
+                    }) {
+                        Image(systemName: "plus")
+                        Text("Jeszcze seria")
+                    }
+                    LVPill(action: { openAdd() }) {
+                        Image(systemName: "plus")
+                        Text("Ćwiczenie")
+                    }
+                }
+                .padding(.top, 22)
+            }
+            Spacer()
+            if !allDone, let upcoming = upNext(session) {
+                let next = upcoming.0
+                NextCard(
+                    caption: Text("Następnie"),
+                    name: live.name(of: next),
+                    detail: [String(localized: "\(next.plannedSets) serii"), LiveFormat.pendingText(next)].compactMap { $0 }.joined(separator: " · ")
+                )
+            }
+        }
+    }
+
+    private var emptyStage: some View {
+        VStack(spacing: 10) {
+            Spacer()
+            Text("Trening bez planu").lvCaps()
+            Text("Dodaj pierwsze ćwiczenie")
+                .font(.system(size: 28, weight: .semibold))
+                .multilineTextAlignment(.center)
+            Text("Dodawaj ćwiczenia na bieżąco: wyszukiwarka wybacza literówki.")
+                .font(.system(size: 15))
+                .foregroundStyle(LV.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 290)
+            Spacer()
+        }
+    }
+
+    // MARK: Dock: side · ORB · side
+
+    private func stopKey(_ e: LiveExercise) -> String { "\(e.id)-\(e.item.sets.count)" }
+
+    @ViewBuilder
+    private func dock(_ session: LiveSession, stage: Stage, now: Double, mood: LiveMood) -> some View {
+        switch stage {
+        case .empty:
+            orbColumn(mood: mood, label: Text("Dodaj ćwiczenie"), a11y: "Dodaj ćwiczenie", icon: "plus") { openAdd() }
+        case .rest:
+            let over = (session.rest?.remaining(now) ?? 0) <= 0
+            orbColumn(mood: mood, label: over ? Text("Start") : Text("Pomiń przerwę"), a11y: "Pomiń przerwę", icon: "arrow.right") {
+                live.tap()
+                live.update { s, t in s.closeRest(t) }
+            }
+        case .complete:
+            let index = session.current
+            let allDone = session.nextOpenIndex(after: index) == nil
+            orbColumn(mood: mood, label: allDone ? Text("Zakończ trening") : Text("Następne ćwiczenie"),
+                      a11y: allDone ? "Zakończ trening" : "Następne ćwiczenie",
+                      icon: allDone ? "flag.checkered" : "arrow.right") {
+                live.tap()
+                if allDone {
+                    if session.exercises[index].isOpen { live.update { s, t in s.finishExercise(index, t) } }
+                    requestFinish()
+                } else {
+                    forward = true
+                    live.update { s, t in
+                        if s.exercises[index].isOpen { s.finishExercise(index, t) }
+                        else if let n = s.nextOpenIndex(after: index) { s.goTo(n) }
+                    }
+                }
+            }
+        case .active:
+            activeDock(session)
+        }
+    }
+
+    private func activeDock(_ session: LiveSession) -> some View {
+        let index = session.current
+        let e = session.exercises[index]
+        let field = timerField(e)
+        let running = session.setTimer != nil
+        let needsStart = field != nil && !running && timedKey != stopKey(e)
+        let setNumber = e.item.sets.count + 1
+        return VStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 22) {
+                SideButton(icon: e.item.sets.isEmpty ? "forward.end" : "flag", label: e.item.sets.isEmpty ? Text("Pomiń") : Text("Koniec")) {
+                    live.tap()
+                    forward = true
+                    live.update { s, t in
+                        if s.exercises[index].item.sets.isEmpty { s.skipExercise(index) } else { s.finishExercise(index, t) }
+                    }
+                }
+                VStack(spacing: 8) {
+                    if needsStart {
+                        LVOrb(mood: .active, label: "Start stopera") {
+                            live.tap()
+                            live.update { s, t in s.startSetTimer(t, target: field == .hold ? holdTarget(e) : nil) }
+                        } content: {
+                            Image(systemName: "play.fill").font(.system(size: 38)).offset(x: 3)
+                        }
+                    } else if running, let field {
+                        LVOrb(mood: .active, label: "Stop") {
+                            live.success()
+                            timedKey = stopKey(e)
+                            live.update { s, t in s.stopSetTimer(t, field: field) }
+                        } content: {
+                            Image(systemName: "stop.fill").font(.system(size: 32))
+                        }
+                    } else {
+                        LVOrb(mood: .active, label: "Zakończ serię") {
+                            logSet(index: index)
+                        } content: {
+                            Image(systemName: "checkmark").font(.system(size: 42, weight: .heavy))
+                        }
+                    }
+                    Group {
+                        if needsStart { Text("Start stopera") } else if running { Text("Stop") } else { Text("Zakończ serię \(setNumber)") }
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                }
+                SideButton(icon: "list.number", label: Text("Lista")) { sheet = .queue }
+            }
+            Group {
+                if needsStart {
+                    Button { sheet = .log(.log, index: index, setIndex: e.item.sets.count) } label: {
+                        Text("Zapisz bez stopera").font(.system(size: 13, weight: .medium)).foregroundStyle(LV.muted)
+                    }
+                } else {
+                    Label("lub przesuń w górę", systemImage: "chevron.up")
+                        .font(.system(size: 12)).foregroundStyle(LV.faint)
+                }
+            }
+            .frame(height: 28)
+        }
+    }
+
+    private func orbColumn(mood: LiveMood, label: Text, a11y: LocalizedStringKey, icon: String, action: @escaping () -> Void) -> some View {
+        VStack(spacing: 8) {
+            LVOrb(mood: mood, label: a11y, action: action) {
+                Image(systemName: icon).font(.system(size: 38, weight: .bold))
+            }
+            label.font(.system(size: 14, weight: .bold))
+        }
+        .padding(.bottom, 34)
+    }
+
+    private func pausedOverlay(_ session: LiveSession, now: Double) -> some View {
+        VStack(spacing: 22) {
+            Text("Pauza").lvCaps()
+            Text(verbatim: Clock.elapsed(session.elapsedMs(now)))
+                .font(.system(size: 72, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+            Text("Pauza: zegar treningu i przerwa są zatrzymane.")
+                .font(.system(size: 14)).foregroundStyle(LV.muted)
+                .multilineTextAlignment(.center).frame(maxWidth: 260)
+            LVOrb(mood: .active, label: "Wznów") {
+                live.tap()
+                live.update { s, t in s.resume(t) }
+            } content: {
+                Image(systemName: "play.fill").font(.system(size: 38)).offset(x: 3)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Material.ultraThinMaterial.opacity(0.9))
+        .background(Color.black.opacity(0.55))
+        .transition(.opacity)
     }
 
     // MARK: Actions
 
+    private func logSet(index: Int) {
+        guard let e = live.session?.exercises[safe: index] else { return }
+        let field = timerField(e)
+        live.update { s, t in
+            if let field, s.setTimer != nil { s.stopSetTimer(t, field: field) }
+            s.logSet(t)
+        }
+        timedKey = nil
+        logged += 1
+    }
+
+    @ViewBuilder
+    private func logSheet(_ mode: LiveLogSheet.Mode, index: Int, setIndex: Int) -> some View {
+        if let e = live.session?.exercises[safe: index] {
+            switch mode {
+            case .edit:
+                if let set = e.item.sets[safe: setIndex] {
+                    LiveLogSheet(mode: .edit, title: live.name(of: e), setNumber: setIndex + 1, measurement: measurement(e), set: set,
+                                 onSave: { v in live.update { s, _ in s.updateSet(index, setIndex, v) } },
+                                 onDelete: { live.update { s, _ in s.deleteSet(index, setIndex) } })
+                }
+            case .pending, .log:
+                LiveLogSheet(mode: mode, title: live.name(of: e), setNumber: e.item.sets.count + 1, measurement: measurement(e), set: e.pending,
+                             onSave: { v in
+                                 live.update { s, _ in if s.exercises.indices.contains(index) { s.exercises[index].pending = v } }
+                                 if mode == .log { logSet(index: index) }
+                             })
+            }
+        }
+    }
+
     private func openAdd(group: String? = nil) {
         addGroupId = group
-        picking = true
+        afterSheet { picking = true }
+    }
+
+    /// Runs `action` once an open sheet is gone (two sheets can't overlap).
+    private func afterSheet(_ action: @escaping () -> Void) {
+        if sheet == nil { action(); return }
+        sheet = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: action)
     }
 
     private func add(_ exercise: Exercise, mode: AddMode) {
@@ -449,7 +811,6 @@ struct LiveWorkoutView: View {
         live.tap()
         live.update { s, _ in
             if let group, let first = s.groupIndices(group).first {
-                // Add into an existing superset: make it current, then superset mode.
                 let previous = s.current
                 s.current = first
                 s.addExercise(exercise.id, mode: .superset, defaultRest: live.defaultRest)
@@ -457,213 +818,93 @@ struct LiveWorkoutView: View {
             } else {
                 s.addExercise(exercise.id, mode: mode, defaultRest: live.defaultRest)
             }
+            // A fresh exercise shows a real number to do, not a dash.
+            if mode != .combo, let i = s.exercises.lastIndex(where: { $0.item.exerciseId == exercise.id && $0.item.sets.isEmpty }) {
+                for f in SetField.primary(exercise.measurement) where f == .reps || f == .distance {
+                    if f.get(s.exercises[i].pending) == nil { f.put(f.seed, into: &s.exercises[i].pending) }
+                }
+            }
         }
         addGroupId = nil
         picked = nil
     }
 
-    private func requestFinish(_ session: LiveSession) {
-        if session.incomplete.isEmpty {
-            finishing = true
-        } else {
-            confirmUnfinished = true
-        }
+    private func requestFinish() {
+        guard let session = live.session else { return }
+        let clean = session.incomplete.isEmpty
+        afterSheet { if clean { finishing = true } else { confirmUnfinished = true } }
     }
 }
 
-/// Rest countdown with −15 s / +15 s / skip.
-private struct RestSection: View {
-    let rest: LiveRest
-    let session: LiveSession
-    @Environment(LiveStore.self) private var live
+/// Lime check + "1 · 8 × +10 kg": a set that is done.
+private struct DoneChip: View {
+    let number: Int
+    let text: String
+    let warmup: Bool
+    let action: () -> Void
 
     var body: some View {
-        Section {
-            TimelineView(.periodic(from: .now, by: 0.25)) { _ in
-                let left = rest.remaining(LiveSession.nowMs)
-                let over = left <= 0
-                VStack(spacing: 10) {
-                    Group {
-                        if over {
-                            Text("Czas start")
-                        } else if rest.pausedRemaining != nil {
-                            Text("Przerwa (pauza)")
-                        } else {
-                            Text("Przerwa")
-                        }
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(over ? .green : .secondary)
-                    Text(verbatim: Clock.text(left))
-                        .font(.system(size: 56, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(over ? .green : .primary)
-                        .contentTransition(.numericText(countsDown: true))
-                    ProgressView(value: max(0, min(1, 1 - left / max(rest.durationSec, 1))))
-                        .tint(over ? .green : .accentColor)
-                    HStack(spacing: 12) {
-                        Button {
-                            live.tap()
-                            live.update { s, now in s.adjustRest(by: -LiveSession.restStep, now) }
-                        } label: {
-                            Text(verbatim: "−15 s").frame(maxWidth: .infinity)
-                        }
-                        .accessibilityLabel(Text("Przerwa krótsza o 15 sekund"))
-                        Button {
-                            live.tap()
-                            live.update { s, now in s.adjustRest(by: LiveSession.restStep, now) }
-                        } label: {
-                            Text(verbatim: "+15 s").frame(maxWidth: .infinity)
-                        }
-                        .accessibilityLabel(Text("Przerwa dłuższa o 15 sekund"))
-                        Button {
-                            live.tap()
-                            live.update { s, now in s.closeRest(now) }
-                        } label: {
-                            Text("Pomiń przerwę").frame(maxWidth: .infinity)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(.black)
+                    .frame(width: 20, height: 20)
+                    .background(warmup ? LV.gold : LV.lime, in: Circle())
+                Text(verbatim: "\(number)").font(.system(size: 13, weight: .heavy)).foregroundStyle(LV.lime)
+                Text(verbatim: text).font(.system(size: 14, weight: .medium)).foregroundStyle(LV.muted).monospacedDigit()
             }
-        } footer: {
-            if let e = session.exercises.first(where: { $0.item.id == rest.itemId }), let set = e.item.sets[safe: rest.setIndex] {
-                Text("Seria \(rest.setIndex + 1) · \(LiveFormat.set(set))")
-            }
+            .padding(.leading, 6)
+            .padding(.trailing, 12)
+            .frame(height: 34)
+            .background(LV.lime.opacity(0.08), in: Capsule())
+            .overlay(Capsule().stroke(LV.lime.opacity(0.25), lineWidth: 1))
         }
+        .buttonStyle(LVPress(scale: 0.94))
+        .accessibilityLabel(Text("Zrobiona seria \(number)"))
     }
 }
 
-/// Stopwatch for hold / timed sets; Stop puts the time into the set.
-private struct SetTimerRow: View {
-    let session: LiveSession
-    let exercise: LiveExercise
-    let field: LiveSession.TimerField
-    @Environment(LiveStore.self) private var live
+private struct SideButton: View {
+    let icon: String
+    let label: Text
+    let action: () -> Void
 
     var body: some View {
-        HStack {
-            if let timer = session.setTimer {
-                TimelineView(.periodic(from: .now, by: 0.25)) { _ in
-                    let seconds = timer.elapsed(LiveSession.nowMs)
-                    let reached = timer.targetSec.map { seconds >= $0 } ?? false
-                    VStack(alignment: .leading, spacing: 2) {
-                        Group {
-                            if field == .hold { Text("Trzymasz") } else { Text("Trwa") }
-                        }
-                        .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(verbatim: Clock.text(seconds.rounded(.down)))
-                            .font(.title.monospacedDigit().bold())
-                            .foregroundStyle(reached ? .green : .primary)
-                    }
-                }
-                Spacer()
-                Button("Stop", systemImage: "stop.fill") {
-                    live.success()
-                    live.update { s, now in s.stopSetTimer(now, field: field) }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-            } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Stoper serii")
-                    if let target = targetSeconds {
-                        Text("Cel \(target.short(0)) s")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                Button("Start", systemImage: "play.fill") {
-                    live.tap()
-                    live.update { s, now in s.startSetTimer(now, target: targetSeconds) }
-                }
-                .buttonStyle(.bordered)
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 56, height: 56)
+                    .lvGlass(Circle())
+                label.font(.system(size: 12, weight: .medium)).foregroundStyle(LV.muted)
             }
         }
-    }
-
-    private var targetSeconds: Double? {
-        field == .hold ? (exercise.pending.holdSeconds ?? exercise.target?["targetHoldMax"] ?? exercise.target?["targetHoldMin"]) : nil
+        .buttonStyle(LVPress())
+        .foregroundStyle(LV.text)
     }
 }
 
-/// Rest between sets of this exercise (−15 / +15 s).
-private struct RestSettingControl: View {
-    let index: Int
-    let seconds: Int
-    @Environment(LiveStore.self) private var live
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Button {
-                live.update { s, _ in s.exercises[index].restSeconds = max(0, seconds - LiveSession.restStep) }
-            } label: {
-                Image(systemName: "minus.circle")
-            }
-            .accessibilityLabel(Text("Krótsza przerwa w tym ćwiczeniu"))
-            .disabled(seconds <= 0)
-            Label { Text(verbatim: Clock.text(Double(seconds))).monospacedDigit() } icon: { Image(systemName: "timer") }
-            Button {
-                live.update { s, _ in s.exercises[index].restSeconds = min(900, seconds + LiveSession.restStep) }
-            } label: {
-                Image(systemName: "plus.circle")
-            }
-            .accessibilityLabel(Text("Dłuższa przerwa w tym ćwiczeniu"))
-        }
-        .accessibilityElement(children: .contain)
-    }
-}
-
-private struct QueueRow: View {
-    let exercise: LiveExercise
+private struct NextCard: View {
+    let caption: Text
     let name: String
-    let groupLabel: String?
-    let isCurrent: Bool
+    let detail: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .frame(width: 22)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    if let groupLabel { Tag("Superseria \(groupLabel)", color: .purple) }
-                    Text(verbatim: name)
-                        .fontWeight(isCurrent ? .semibold : .regular)
-                        .foregroundStyle(exercise.status == .skipped ? .secondary : .primary)
-                        .lineLimit(2)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                caption.lvCaps()
+                Text(verbatim: name).font(.system(size: 18, weight: .bold)).lineLimit(1)
+                if !detail.isEmpty {
+                    Text(verbatim: detail).font(.system(size: 14)).foregroundStyle(LV.muted).lineLimit(1).monospacedDigit()
                 }
-                Text(verbatim: "\(exercise.item.sets.count) / \(max(exercise.plannedSets, exercise.item.sets.count))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
             }
-            Spacer()
-            if isCurrent {
-                Image(systemName: "chevron.left").font(.caption).foregroundStyle(.tint)
-            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").foregroundStyle(LV.faint)
         }
-    }
-
-    private var icon: String {
-        switch exercise.status {
-        case .done: return "checkmark.circle.fill"
-        case .skipped: return "forward.circle"
-        case .active: return "play.circle.fill"
-        case .pending: return isCurrent ? "play.circle" : "circle"
-        }
-    }
-
-    private var color: Color {
-        switch exercise.status {
-        case .done: return .green
-        case .skipped: return .secondary
-        default: return isCurrent ? .accentColor : .secondary
-        }
+        .padding(16)
+        .lvGlass(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.bottom, 8)
     }
 }
 

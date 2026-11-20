@@ -21,15 +21,27 @@ struct LiveFinishView: View {
         let stats = Stats(session)
         return Form {
             Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    if stats.sets > 0 {
-                        Text("Świetna robota").font(.title.bold())
-                    } else {
-                        Text("Jeszcze nic nie zapisano").font(.title.bold())
+                VStack(spacing: 6) {
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 40, weight: .heavy))
+                        .foregroundStyle(.black)
+                        .frame(width: 96, height: 96)
+                        .background(LiveMood.done.cta, in: Circle())
+                        .shadow(color: LV.lime.opacity(0.6), radius: 36)
+                        .padding(.bottom, 12)
+                    Group {
+                        if stats.sets > 0 {
+                            Text("Świetna robota")
+                        } else {
+                            Text("Jeszcze nic nie zapisano")
+                        }
                     }
+                    .font(.system(size: 30, weight: .heavy))
                     Text(verbatim: DayString.dayLong(session.date))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(LV.muted)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
             }
@@ -56,13 +68,15 @@ struct LiveFinishView: View {
                     }
                 }
                 .padding(.vertical, 4)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
 
             if !stats.highlights.isEmpty {
                 Section("Najlepsze w tym treningu") {
                     ForEach(stats.highlights) { h in
                         HStack {
-                            Image(systemName: h.icon).foregroundStyle(.tint).frame(width: 24)
+                            Image(systemName: h.icon).foregroundStyle(LV.gold).frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(h.label).font(.caption).foregroundStyle(.secondary)
                                 Text(verbatim: live.name(of: h.exercise))
@@ -95,17 +109,16 @@ struct LiveFinishView: View {
             }
 
             Section {
-                Button {
+                LVCta(mood: .done) {
                     Task { await save() }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if saving { ProgressView() } else { Text("Zapisz trening").font(.headline) }
-                        Spacer()
+                } content: {
+                    if saving {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "checkmark")
+                        Text("Zapisz trening")
                     }
-                    .padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent)
                 .disabled(saving || stats.sets == 0)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -115,6 +128,10 @@ struct LiveFinishView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { LiveAmbient(mood: .done) }
+        .toolbar(.visible, for: .navigationBar)
+        .preferredColorScheme(.dark)
         .navigationTitle("Zakończ trening")
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -154,7 +171,7 @@ private struct StatTile<Caption: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(verbatim: value)
-                .font(.title2.bold())
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
                 .monospacedDigit()
             label
                 .font(.caption)
@@ -162,7 +179,8 @@ private struct StatTile<Caption: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+        .padding(4)
+        .lvGlass(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 

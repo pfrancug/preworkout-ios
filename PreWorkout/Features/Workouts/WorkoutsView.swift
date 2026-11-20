@@ -15,13 +15,12 @@ struct WorkoutsView: View {
         NavigationStack {
             LoadStateView(state: state, retry: load) { workouts in
                 List {
-                    LiveStartSection()
                     if workouts.isEmpty {
                         Section {
                             ContentUnavailableView {
                                 Label("Brak treningów", systemImage: "dumbbell")
                             } description: {
-                                Text("Zacznij trening na żywo albo dodaj go ręcznie przyciskiem +.")
+                                Text("Zacznij trening w zakładce Na żywo albo dodaj go ręcznie przyciskiem +.")
                             }
                         }
                     }
@@ -161,61 +160,5 @@ private struct WorkoutRow: View {
             .labelStyle(.titleAndIcon)
         }
         .padding(.vertical, 2)
-    }
-}
-
-/// Top of the workout list: start a live workout or go back to the running one.
-private struct LiveStartSection: View {
-    @Environment(LiveStore.self) private var live
-
-    var body: some View {
-        Section {
-            if let session = live.session {
-                Button {
-                    live.presented = true
-                } label: {
-                    HStack(spacing: 14) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .frame(width: 48, height: 48)
-                            .background(.green.gradient, in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Trening w toku").font(.headline)
-                            TimelineView(.periodic(from: .now, by: 1)) { _ in
-                                HStack(spacing: 4) {
-                                    Text(verbatim: Clock.elapsed(session.elapsedMs(LiveSession.nowMs)))
-                                        .monospacedDigit()
-                                    if session.isPaused { Text("Pauza") }
-                                }
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text("Wróć").font(.headline).foregroundStyle(.tint)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .tint(.primary)
-            } else {
-                Button {
-                    live.start()
-                } label: {
-                    VStack(spacing: 4) {
-                        Label("Rozpocznij trening", systemImage: "play.fill")
-                            .font(.headline)
-                        Text("Stopery, przerwy i szybkie wpisywanie serii.")
-                            .font(.caption)
-                            .opacity(0.85)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.borderedProminent)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            }
-        }
     }
 }

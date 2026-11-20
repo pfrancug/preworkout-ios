@@ -492,22 +492,42 @@
         }
       }
     },
-    "Cel %@ s": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Target %@ s"
-          }
-        }
-      }
-    },
     "Cel dzienny": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Daily goal"
+          }
+        }
+      }
+    },
+    "Cel osiągnięty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target reached"
+          }
+        }
+      }
+    },
+    "Cel utrzymania": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold target"
+          }
+        }
+      }
+    },
+    "Cel: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target: %@"
           }
         }
       }
@@ -538,16 +558,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weight"
-          }
-        }
-      }
-    },
-    "Ciężar, RPE, notatka": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weight, RPE, note"
           }
         }
       }
@@ -702,6 +712,16 @@
         }
       }
     },
+    "Dodaj pierwsze ćwiczenie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add your first exercise"
+          }
+        }
+      }
+    },
     "Dodaj serię": {
       "localizations": {
         "en": {
@@ -852,16 +872,6 @@
         }
       }
     },
-    "Dłuższa przerwa w tym ćwiczeniu": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Longer rest for this exercise"
-          }
-        }
-      }
-    },
     "Dźwięk na koniec przerwy": {
       "localizations": {
         "en": {
@@ -938,6 +948,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Elite"
+          }
+        }
+      }
+    },
+    "Gotowe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         }
       }
@@ -1102,6 +1122,16 @@
         }
       }
     },
+    "Jeszcze nic nie zrobione": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing done yet"
+          }
+        }
+      }
+    },
     "Jeszcze seria": {
       "localizations": {
         "en": {
@@ -1182,32 +1212,22 @@
         }
       }
     },
+    "Koniec": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish"
+          }
+        }
+      }
+    },
     "Koniec przerwy": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Rest is over"
-          }
-        }
-      }
-    },
-    "Kopiuj poprzednią": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy previous"
-          }
-        }
-      }
-    },
-    "Krótsza przerwa w tym ćwiczeniu": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shorter rest for this exercise"
           }
         }
       }
@@ -1238,6 +1258,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lightly active"
+          }
+        }
+      }
+    },
+    "Lista": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List"
+          }
+        }
+      }
+    },
+    "Lista ćwiczeń": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercise list"
           }
         }
       }
@@ -1312,12 +1352,32 @@
         }
       }
     },
+    "Na czas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timed"
+          }
+        }
+      }
+    },
     "Na koniec": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "At the end"
+          }
+        }
+      }
+    },
+    "Na żywo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
           }
         }
       }
@@ -1368,6 +1428,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Next exercise"
+          }
+        }
+      }
+    },
+    "Następnie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up next"
           }
         }
       }
@@ -1815,6 +1885,16 @@
         }
       }
     },
+    "Popraw": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fix"
+          }
+        }
+      }
+    },
     "Porzucić ten trening?": {
       "localizations": {
         "en": {
@@ -1831,6 +1911,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Discard workout"
+          }
+        }
+      }
+    },
+    "Powtórz trening": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat a workout"
           }
         }
       }
@@ -1968,6 +2058,16 @@
         }
       }
     },
+    "Przerwa w tym ćwiczeniu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest for this exercise"
+          }
+        }
+      }
+    },
     "Płeć": {
       "localizations": {
         "en": {
@@ -2094,16 +2194,6 @@
         }
       }
     },
-    "Rozpocznij trening": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Start workout"
-          }
-        }
-      }
-    },
     "Równanie Mifflin-St Jeor jest uważane za najdokładniejsze do obliczania podstawowej przemiany materii (BMR).": {
       "localizations": {
         "en": {
@@ -2134,12 +2224,12 @@
         }
       }
     },
-    "Seria %lld · %@": {
+    "Seria %lld zrobiona": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set %lld · %@"
+            "value": "Set %lld done"
           }
         }
       }
@@ -2234,32 +2324,22 @@
         }
       }
     },
+    "Start stopera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start timer"
+          }
+        }
+      }
+    },
     "Stop": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Stop"
-          }
-        }
-      }
-    },
-    "Stoper serii": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Set timer"
-          }
-        }
-      }
-    },
-    "Stopery, przerwy i szybkie wpisywanie serii.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timers, rest and quick set logging."
           }
         }
       }
@@ -2324,6 +2404,36 @@
         }
       }
     },
+    "Teraz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now"
+          }
+        }
+      }
+    },
+    "Teraz: seria %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now: set %lld"
+          }
+        }
+      }
+    },
+    "Teraz: seria %lld z %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now: set %lld of %lld"
+          }
+        }
+      }
+    },
     "Trening": {
       "localizations": {
         "en": {
@@ -2334,12 +2444,22 @@
         }
       }
     },
-    "Trening w toku": {
+    "Trening bez planu": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Workout in progress"
+            "value": "Ad hoc workout"
+          }
+        }
+      }
+    },
+    "Trening na żywo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live workout"
           }
         }
       }
@@ -2410,6 +2530,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your details"
+          }
+        }
+      }
+    },
+    "Twój czas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your time"
           }
         }
       }
@@ -2724,12 +2854,12 @@
         }
       }
     },
-    "Wróć": {
+    "Więcej: RPE, rozgrzewka, notatka": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resume"
+            "value": "More: RPE, warm-up, note"
           }
         }
       }
@@ -2790,6 +2920,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "All sets logged in this session will be lost. This can't be undone."
+          }
+        }
+      }
+    },
+    "Wszystko zrobione": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All done"
           }
         }
       }
@@ -2924,12 +3064,32 @@
         }
       }
     },
-    "Zacznij trening na żywo albo dodaj go ręcznie przyciskiem +.": {
+    "Zacznij trening w zakładce Na żywo albo dodaj go ręcznie przyciskiem +.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start a live workout or add one manually with +."
+            "value": "Start one in the Live tab or add it manually with +."
+          }
+        }
+      }
+    },
+    "Zakończ serię": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish set"
+          }
+        }
+      }
+    },
+    "Zakończ serię %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish set %lld"
           }
         }
       }
@@ -2944,32 +3104,12 @@
         }
       }
     },
-    "Zakończ ćwiczenie": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finish exercise"
-          }
-        }
-      }
-    },
     "Zaloguj": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Sign in"
-          }
-        }
-      }
-    },
-    "Zapisane serie": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Logged sets"
           }
         }
       }
@@ -2990,6 +3130,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save"
+          }
+        }
+      }
+    },
+    "Zapisz bez stopera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log without timer"
           }
         }
       }
@@ -3084,6 +3234,16 @@
         }
       }
     },
+    "Zmień wartości serii": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change set values"
+          }
+        }
+      }
+    },
     "Zmień zdjęcie": {
       "localizations": {
         "en": {
@@ -3094,12 +3254,22 @@
         }
       }
     },
-    "Zwiń (trening trwa dalej)": {
+    "Zrobiona seria %lld": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Minimize (workout keeps running)"
+            "value": "Done set %lld"
+          }
+        }
+      }
+    },
+    "Zrobione": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         }
       }
@@ -3110,6 +3280,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "goal removed"
+          }
+        }
+      }
+    },
+    "czas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "time"
           }
         }
       }
@@ -3127,6 +3307,9 @@
         }
       }
     },
+    "kg": {
+      "shouldTranslate": false
+    },
     "lat": {
       "localizations": {
         "en": {
@@ -3137,12 +3320,32 @@
         }
       }
     },
-    "ostatnio %@": {
+    "lub przesuń w górę": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "last %@"
+            "value": "or swipe up"
+          }
+        }
+      }
+    },
+    "metry": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "meters"
+          }
+        }
+      }
+    },
+    "powt.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reps"
           }
         }
       }
@@ -3157,6 +3360,16 @@
         }
       }
     },
+    "sekundy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seconds"
+          }
+        }
+      }
+    },
     "Ćwiczenia": {
       "localizations": {
         "en": {
@@ -3167,12 +3380,32 @@
         }
       }
     },
+    "Ćwiczenia dodajesz w trakcie. Przerwy, stoper i serie liczą się same.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add exercises as you go. Rest, timers and sets are tracked for you."
+          }
+        }
+      }
+    },
     "Ćwiczenia użytego w planach lub treningach nie da się usunąć – możesz je zarchiwizować w edycji.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "An exercise used in plans or workouts can't be deleted – archive it in Edit instead."
+          }
+        }
+      }
+    },
+    "Ćwiczenie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercise"
           }
         }
       }

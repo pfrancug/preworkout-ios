@@ -108,117 +108,236 @@ enum SetField: String, CaseIterable, Identifiable {
     }
 }
 
-/// − value + row; holding a button repeats.
-struct StepperRow: View {
+extension SetField {
+    /// One step up or down; an empty field starts from its seed.
+    func bump(_ set: inout WorkoutSet, up: Bool) {
+        let delta = up ? step : -step
+        let next: Double
+        if let current = get(set) {
+            next = min(range.upperBound, max(range.lowerBound, current + delta))
+        } else {
+            next = up ? max(seed, range.lowerBound + (seed == 0 ? step : 0)) : range.lowerBound
+        }
+        put(next, into: &set)
+    }
+
+    var unit: LocalizedStringKey? {
+        switch self {
+        case .reps: return "powt."
+        case .hold: return "sekundy"
+        case .duration: return "czas"
+        case .weight: return "kg"
+        case .distance: return "metry"
+        case .rpe, .rir: return nil
+        }
+    }
+
+    /// Value shown big (weight with a "+").
+    func display(_ value: Double?) -> String {
+        guard let value else { return "–" }
+        return self == .weight && value > 0 ? "+" + format(value) : format(value)
+    }
+}
+
+/// Small round glass − / + (repeats while held).
+struct LVStepButton: View {
+    let up: Bool
+    var size: CGFloat = 52
+    var disabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: up ? "plus" : "minus")
+                .font(.system(size: size * 0.36, weight: .bold))
+                .foregroundStyle(LV.text)
+                .frame(width: size, height: size)
+                .lvGlass(Circle())
+        }
+        .buttonStyle(LVPress(scale: 0.88))
+        .buttonRepeatBehavior(.enabled)
+        .disabled(disabled)
+        .opacity(disabled ? 0.35 : 1)
+        .accessibilityLabel(up ? Text("Więcej") : Text("Mniej"))
+    }
+}
+
+/// Big number dial: − value +, and dragging sideways over the number scrubs it.
+struct NumberDial: View {
     let field: SetField
     @Binding var set: WorkoutSet
-    var large = false
+    var size: CGFloat = 76
+    @State private var dragSteps = 0
 
     var body: some View {
         let value = field.get(set)
-        HStack(spacing: 12) {
-            Text(field.title)
-                .font(large ? .subheadline : .body)
-                .foregroundStyle(large ? .secondary : .primary)
-            Spacer(minLength: 8)
-            stepControl("minus", delta: -field.step, disabled: value == nil || (value ?? 0) <= field.range.lowerBound)
-            Text(verbatim: field.format(value))
-                .font(large ? .title.weight(.semibold) : .title3.weight(.medium))
-                .monospacedDigit()
-                .frame(minWidth: large ? 84 : 64)
-                .contentTransition(.numericText())
-            stepControl("plus", delta: field.step, disabled: (value ?? 0) >= field.range.upperBound)
+        VStack(spacing: 6) {
+            Text(field.title).lvCaps()
+            HStack(spacing: 14) {
+                LVStepButton(up: false, disabled: value == nil || (value ?? 0) <= field.range.lowerBound) { step(false) }
+                Text(verbatim: field.display(value))
+                    .font(.system(size: size, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(LV.heroGradient)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(minWidth: 120)
+                    .contentTransition(.numericText())
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 4)
+                            .onChanged { g in
+                                let steps = Int(g.translation.width / 18)
+                                while dragSteps < steps { dragSteps += 1; step(true) }
+                                while dragSteps > steps { dragSteps -= 1; step(false) }
+                            }
+                            .onEnded { _ in dragSteps = 0 }
+                    )
+                LVStepButton(up: true, disabled: (value ?? 0) >= field.range.upperBound) { step(true) }
+            }
         }
-        .padding(.vertical, large ? 4 : 0)
-    }
-
-    private func stepControl(_ icon: String, delta: Double, disabled: Bool) -> some View {
-        Button {
-            withAnimation(.snappy) { change(by: delta) }
-        } label: {
-            Image(systemName: icon)
-                .font(.body.weight(.semibold))
-                .frame(width: large ? 44 : 36, height: large ? 44 : 36)
-                .background(.tint.opacity(0.15), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.tint)
-        .buttonRepeatBehavior(.enabled)
-        .disabled(disabled)
         .sensoryFeedback(.selection, trigger: field.get(set))
     }
 
-    private func change(by delta: Double) {
-        let current = field.get(set)
-        let next: Double
-        if let current {
-            next = min(field.range.upperBound, max(field.range.lowerBound, current + delta))
-        } else {
-            next = delta > 0 ? max(field.seed, field.range.lowerBound + (field.seed == 0 ? field.step : 0)) : field.range.lowerBound
-        }
-        field.put(next, into: &set)
+    private func step(_ up: Bool) {
+        withAnimation(.snappy) { field.bump(&set, up: up) }
     }
 }
 
-/// Every editable field of a set (used for logging and for editing a logged set).
-struct SetFieldsView: View {
-    let measurement: String
+/// Compact − value + capsule (secondary numbers: weight, RPE, RIR…).
+struct LVInlineStepper: View {
+    let field: SetField
     @Binding var set: WorkoutSet
-    var showExtras: Bool
+    var showTitle = true
 
     var body: some View {
-        ForEach(SetField.primary(measurement)) { field in
-            StepperRow(field: field, set: $set, large: true)
-        }
-        if showExtras {
-            ForEach(SetField.extra(measurement)) { field in
-                StepperRow(field: field, set: $set)
+        let value = field.get(set)
+        HStack(spacing: 0) {
+            Button { withAnimation(.snappy) { field.bump(&set, up: false) } } label: {
+                Image(systemName: "minus").frame(width: 44, height: 44)
             }
-            Toggle("Rozgrzewka", isOn: $set.isWarmup)
-            TextField("Notatka do serii", text: $set.notes, axis: .vertical)
+            .buttonRepeatBehavior(.enabled)
+            .disabled(value == nil || (value ?? 0) <= field.range.lowerBound)
+            .accessibilityLabel(Text("Mniej"))
+            VStack(spacing: 0) {
+                Text(verbatim: field == .weight ? "\(field.display(value ?? 0)) kg" : field.display(value))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                if showTitle {
+                    Text(field.title).font(.system(size: 10, weight: .medium)).foregroundStyle(LV.faint)
+                }
+            }
+            .frame(minWidth: 72)
+            Button { withAnimation(.snappy) { field.bump(&set, up: true) } } label: {
+                Image(systemName: "plus").frame(width: 44, height: 44)
+            }
+            .buttonRepeatBehavior(.enabled)
+            .disabled((value ?? 0) >= field.range.upperBound)
+            .accessibilityLabel(Text("Więcej"))
         }
+        .font(.system(size: 15, weight: .bold))
+        .foregroundStyle(LV.text)
+        .buttonStyle(LVPress(scale: 0.85))
+        .lvGlass(Capsule())
+        .sensoryFeedback(.selection, trigger: field.get(set))
     }
 }
 
-/// Sheet: edit or delete a logged set.
-struct LiveSetEditor: View {
+/// Sheet: the numbers of one set, big dials first, extras below.
+/// Used to adjust the set about to be done, to log one, or to fix a logged one.
+struct LiveLogSheet: View {
+    enum Mode: Equatable { case pending, log, edit }
+
+    let mode: Mode
     let title: String
     let setNumber: Int
     let measurement: String
     @State var set: WorkoutSet
     let onSave: (WorkoutSet) -> Void
-    let onDelete: () -> Void
+    var onDelete: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var extras = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SetFieldsView(measurement: measurement, set: $set, showExtras: true)
-                } header: {
+        ScrollView {
+            VStack(spacing: 24) {
+                VStack(spacing: 6) {
+                    Group {
+                        if mode == .edit {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(LV.lime)
+                                Text("Zrobiona seria \(setNumber)")
+                            }
+                        } else {
+                            Text("Teraz: seria \(setNumber)")
+                        }
+                    }
+                    .lvCaps(mode == .edit ? LV.lime : LV.ember)
                     Text(verbatim: title)
+                        .font(.system(size: 22, weight: .bold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(LV.text)
                 }
-                Section {
-                    Button("Usuń serię", role: .destructive) {
-                        onDelete()
-                        dismiss()
+                .padding(.top, 28)
+
+                ForEach(SetField.primary(measurement)) { field in
+                    NumberDial(field: field, set: $set)
+                }
+
+                if extras {
+                    VStack(spacing: 12) {
+                        ForEach(SetField.extra(measurement)) { field in
+                            LVInlineStepper(field: field, set: $set)
+                        }
+                        Toggle("Rozgrzewka", isOn: $set.isWarmup)
+                            .tint(LV.ember)
+                            .padding(.horizontal, 18)
+                            .frame(height: 50)
+                            .lvGlass(Capsule())
+                        TextField("Notatka do serii", text: $set.notes, axis: .vertical)
+                            .padding(14)
+                            .lvGlass(RoundedRectangle(cornerRadius: 18))
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                } else {
+                    LVPill(action: { withAnimation(LV.spring) { extras = true } }) {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Więcej: RPE, rozgrzewka, notatka")
                     }
                 }
-            }
-            .navigationTitle("Seria \(setNumber)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Anuluj") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Zapisz") {
+
+                VStack(spacing: 10) {
+                    LVCta(mood: mode == .edit ? .done : .active) {
                         onSave(set)
                         dismiss()
+                    } content: {
+                        Image(systemName: "checkmark")
+                        switch mode {
+                        case .pending: Text("Gotowe")
+                        case .log: Text("Zapisz serię \(setNumber)")
+                        case .edit: Text("Zapisz zmiany")
+                        }
+                    }
+                    if let onDelete {
+                        Button(role: .destructive) {
+                            onDelete()
+                            dismiss()
+                        } label: {
+                            Label("Usuń serię", systemImage: "trash")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(LV.danger)
+                                .frame(height: 44)
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 22)
+            .padding(.bottom, 24)
         }
-        .presentationDetents([.medium, .large])
+        .foregroundStyle(LV.text)
+        .lvSheet(mode == .edit ? [.large] : [.medium, .large])
     }
 }
 
@@ -236,6 +355,12 @@ enum LiveFormat {
         if let distance = set.distanceM { parts.append("\(distance.short()) m") }
         if let duration = set.durationSeconds { parts.append(Clock.text(Double(duration))) }
         return parts.isEmpty ? "•" : parts.joined(separator: " · ")
+    }
+
+    /// The prepared next set in words, nil when empty.
+    static func pendingText(_ e: LiveExercise) -> String? {
+        let text = set(e.pending)
+        return text == "•" ? nil : text
     }
 
     /// Plan target in words, nil without a target.
