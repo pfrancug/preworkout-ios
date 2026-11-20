@@ -279,17 +279,17 @@ struct SetEditorView: View {
         case .hold:
             DecimalField(LocalizedStringKey(label), value: Binding(
                 get: { step.holdSeconds },
-                set: { updateStep(index, field: field, hold: $0) }
+                set: { updateStep(index: index, field: field, hold: $0) }
             ), unit: "s")
         case .duration:
             IntField(LocalizedStringKey(label), value: Binding(
                 get: { step.durationSeconds },
-                set: { updateStep(index, field: field, duration: $0) }
+                set: { updateStep(index: index, field: field, duration: $0) }
             ), unit: "s")
         default:
             IntField(LocalizedStringKey(label), value: Binding(
                 get: { step.reps },
-                set: { updateStep(index, field: field, reps: $0) }
+                set: { updateStep(index: index, field: field, reps: $0) }
             ))
         }
     }
