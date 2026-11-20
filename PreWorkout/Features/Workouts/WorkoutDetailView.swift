@@ -55,7 +55,7 @@ struct WorkoutDetailView: View {
                             ExerciseDetailView(exerciseId: exercise.exerciseId)
                         } label: {
                             HStack(spacing: 4) {
-                                Text(exercises.name(exercise.exerciseId))
+                                Text(comboTitle(exercise))
                                 if let variant = exercise.variant, !variant.isEmpty {
                                     Text(verbatim: "· \(variant)")
                                 }
@@ -125,5 +125,10 @@ struct WorkoutDetailView: View {
         } catch {
             actionError = error.localizedDescription
         }
+    }
+
+    private func comboTitle(_ exercise: WorkoutExercise) -> String {
+        let ids = exercise.sequence.count > 1 ? exercise.sequence : [exercise.exerciseId]
+        return ids.map { exercises.name($0) }.joined(separator: " → ")
     }
 }

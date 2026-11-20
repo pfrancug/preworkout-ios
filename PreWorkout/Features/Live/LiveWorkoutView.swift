@@ -19,6 +19,7 @@ struct LiveWorkoutView: View {
     @State private var forward = true
     /// Exercise + set the stopwatch was just stopped for (orb turns into "done").
     @State private var timedKey: String?
+    @State private var timedStep: (index: Int, field: SetField)?
 
     enum SheetKind: Identifiable {
         case log(LiveLogSheet.Mode, index: Int, setIndex: Int)
@@ -47,7 +48,13 @@ struct LiveWorkoutView: View {
             .navigationDestination(isPresented: $finishing) { LiveFinishView() }
         }
         .preferredColorScheme(.dark)
-        .task { await library.loadIfNeeded() }
+        .task {
+            await library.loadIfNeeded()
+            ensureSteps()
+        }
+        .onChange(of: live.session?.exercises.map(\.item.sequence) ?? []) { _, _ in
+            ensureSteps()
+        }
         .sensoryFeedback(.success, trigger: logged)
         .sheet(item: $sheet) { kind in
             switch kind {
@@ -340,7 +347,9 @@ struct LiveWorkoutView: View {
     @ViewBuilder
     private func hero(_ session: LiveSession, _ e: LiveExercise, index: Int, now: Double) -> some View {
         let pending = pendingBinding(index)
-        if let field = timerField(e) {
+        if e.item.sequence.count > 1 {
+            comboHero(session, e, index: index, now: now)
+        } else if let field = timerField(e) {
             let running = session.setTimer
             let target = field == .hold ? holdTarget(e) : nil
             let recorded: Double? = field == .hold ? e.pending.holdSeconds : e.pending.durationSeconds.map(Double.init)
@@ -428,6 +437,57 @@ struct LiveWorkoutView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func measureId(_ id: String) -> String { library.byId[id]?.measurement ?? "reps" }
+
+    private func ensureSteps() {
+        live.update { s, _ in s.ensureComboPending(measurementOf: measureId) }
+    }
+
+    private func comboHero(_ session: LiveSession, _ e: LiveExercise, index: Int, now: Double) -> some View {
+        let running = session.setTimer
+        return VStack(spacing: 14) {
+            ComboStepList(
+                sequence: e.item.sequence,
+                steps: e.pending.steps,
+                nameOf: { library.byId[$0]?.name ?? $0 },
+                measurementOf: measureId,
+                runningIndex: timedStep?.index,
+                runningSeconds: running.map { $0.elapsed(now) },
+                onAdjust: { stepIndex, field, up in
+                    live.update { s, _ in
+                        guard s.exercises.indices.contains(index) else { return }
+                        var steps = s.exercises[index].pending.steps
+                        if steps.indices.contains(stepIndex) {
+                            field.bumpStep(&steps[stepIndex], up: up)
+                            s.exercises[index].pending.steps = steps
+                            s.exercises[index].pending.applySteps(sequence: s.exercises[index].item.sequence)
+                        }
+                    }
+                },
+                onToggleTimer: { stepIndex, field in
+                    if let timed = timedStep, timed.index == stepIndex, session.setTimer != nil {
+                        live.update { s, t in
+                            let seconds = max(1, (s.setTimer?.elapsed(t) ?? 0).rounded())
+                            guard s.exercises.indices.contains(index) else { return }
+                            var steps = s.exercises[index].pending.steps
+                            if steps.indices.contains(stepIndex) {
+                                field.putStep(seconds, into: &steps[stepIndex])
+                                s.exercises[index].pending.steps = steps
+                                s.exercises[index].pending.applySteps(sequence: s.exercises[index].item.sequence)
+                            }
+                            s.setTimer = nil
+                        }
+                        timedStep = nil
+                    } else {
+                        let target = e.pending.steps[safe: stepIndex].flatMap { field.stepValue($0) }
+                        timedStep = (index: stepIndex, field: field)
+                        live.update { s, t in s.startSetTimer(t, target: target) }
+                    }
+                }
+            )
         }
     }
 
@@ -770,10 +830,24 @@ struct LiveWorkoutView: View {
         guard let e = live.session?.exercises[safe: index] else { return }
         let field = timerField(e)
         live.update { s, t in
-            if let field, s.setTimer != nil { s.stopSetTimer(t, field: field) }
+            if e.item.sequence.count > 1, let timed = timedStep, s.setTimer != nil {
+                let seconds = max(1, (s.setTimer?.elapsed(t) ?? 0).rounded())
+                if s.exercises.indices.contains(index) {
+                    var steps = s.exercises[index].pending.steps
+                    if steps.indices.contains(timed.index) {
+                        timed.field.putStep(seconds, into: &steps[timed.index])
+                        s.exercises[index].pending.steps = steps
+                        s.exercises[index].pending.applySteps(sequence: s.exercises[index].item.sequence)
+                    }
+                    s.setTimer = nil
+                }
+            } else if let field, s.setTimer != nil {
+                s.stopSetTimer(t, field: field)
+            }
             s.logSet(t)
         }
         timedKey = nil
+        timedStep = nil
         logged += 1
     }
 
@@ -784,11 +858,13 @@ struct LiveWorkoutView: View {
             case .edit:
                 if let set = e.item.sets[safe: setIndex] {
                     LiveLogSheet(mode: .edit, title: live.name(of: e), setNumber: setIndex + 1, measurement: measurement(e), set: set,
+                                 sequence: e.item.sequence, nameOf: { library.byId[$0]?.name ?? $0 }, measurementOf: measureId,
                                  onSave: { v in live.update { s, _ in s.updateSet(index, setIndex, v) } },
                                  onDelete: { live.update { s, _ in s.deleteSet(index, setIndex) } })
                 }
             case .pending, .log:
                 LiveLogSheet(mode: mode, title: live.name(of: e), setNumber: e.item.sets.count + 1, measurement: measurement(e), set: e.pending,
+                             sequence: e.item.sequence, nameOf: { library.byId[$0]?.name ?? $0 }, measurementOf: measureId,
                              onSave: { v in
                                  live.update { s, _ in if s.exercises.indices.contains(index) { s.exercises[index].pending = v } }
                                  if mode == .log { logSet(index: index) }
@@ -821,6 +897,9 @@ struct LiveWorkoutView: View {
             } else {
                 s.addExercise(exercise.id, mode: mode, defaultRest: live.defaultRest)
             }
+            s.ensureComboPending(measurementOf: { id in
+                id == exercise.id ? exercise.measurement : measureId(id)
+            })
             // A fresh exercise shows a real number to do, not a dash.
             if mode != .combo, let i = s.exercises.lastIndex(where: { $0.item.exerciseId == exercise.id && $0.item.sets.isEmpty }) {
                 for f in SetField.primary(exercise.measurement) where f == .reps || f == .distance {

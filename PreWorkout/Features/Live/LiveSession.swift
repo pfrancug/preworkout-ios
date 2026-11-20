@@ -428,6 +428,26 @@ struct LiveSession: Codable, Hashable {
         }
     }
 
+    /// Keep pending.steps aligned with the combo sequence.
+    mutating func ensureComboPending(measurementOf: (String) -> String) {
+        for i in exercises.indices {
+            let seq = exercises[i].item.sequence
+            if seq.count <= 1 {
+                if !exercises[i].pending.steps.isEmpty { exercises[i].pending.steps = [] }
+                continue
+            }
+            let pending = exercises[i].pending
+            let aligned = pending.steps.count == seq.count && zip(pending.steps, seq).allSatisfy { $0.exerciseId == $1 }
+            let steps = aligned
+                ? pending.steps
+                : WorkoutSet.defaultSteps(sequence: seq, measurementOf: measurementOf, hint: exercises[i].item.sets.last ?? pending)
+            var next = pending
+            next.steps = steps
+            next.applySteps(sequence: seq)
+            if next != pending { exercises[i].pending = next }
+        }
+    }
+
     /// Logs the pending set of the current exercise. Superset: moves to the next
     /// member of the round without rest; rest starts after the round.
     mutating func logSet(_ now: Double) {
@@ -436,6 +456,7 @@ struct LiveSession: Codable, Hashable {
         closeRest(now)
         var set = e.pending
         set.restSeconds = nil
+        set.applySteps(sequence: e.item.sequence)
         let setIndex = e.item.sets.count
         exercises[index].status = .active
         if exercises[index].startedAt == nil { exercises[index].startedAt = now }

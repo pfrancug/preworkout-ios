@@ -110,8 +110,46 @@ enum SetField: String, CaseIterable, Identifiable {
 
 extension SetField {
     /// One step up or down; an empty field starts from its seed.
+    static func forMeasurement(_ measurement: String) -> SetField {
+        switch measurement {
+        case "hold": return .hold
+        case "distance_time": return .duration
+        default: return .reps
+        }
+    }
+
+    func stepValue(_ step: WorkoutSetStep) -> Double? {
+        switch self {
+        case .reps: return step.reps.map(Double.init)
+        case .hold: return step.holdSeconds
+        case .duration: return step.durationSeconds.map(Double.init)
+        default: return nil
+        }
+    }
+
+    func putStep(_ value: Double?, into step: inout WorkoutSetStep) {
+        switch self {
+        case .reps: step.reps = value.map { Int($0) }
+        case .hold: step.holdSeconds = value
+        case .duration: step.durationSeconds = value.map { Int($0) }
+        default: break
+        }
+    }
+
+    func bumpStep(_ step: inout WorkoutSetStep, up: Bool) {
+        let delta = up ? self.step : -self.step
+        let current = stepValue(step)
+        let next: Double
+        if let current {
+            next = min(range.upperBound, max(range.lowerBound, current + delta))
+        } else {
+            next = up ? 1 : range.lowerBound
+        }
+        putStep(next, into: &step)
+    }
+
     func bump(_ set: inout WorkoutSet, up: Bool) {
-        let delta = up ? step : -step
+        let delta = up ? self.step : -self.step
         let next: Double
         if let current = get(set) {
             next = min(range.upperBound, max(range.lowerBound, current + delta))
@@ -254,6 +292,9 @@ struct LiveLogSheet: View {
     let setNumber: Int
     let measurement: String
     @State var set: WorkoutSet
+    var sequence: [String] = []
+    var nameOf: (String) -> String = { $0 }
+    var measurementOf: (String) -> String = { _ in "reps" }
     let onSave: (WorkoutSet) -> Void
     var onDelete: (() -> Void)?
 
@@ -282,8 +323,25 @@ struct LiveLogSheet: View {
                 }
                 .padding(.top, 28)
 
-                ForEach(SetField.primary(measurement)) { field in
-                    NumberDial(field: field, set: $set)
+                if sequence.count > 1 {
+                    ComboStepList(
+                        sequence: sequence,
+                        steps: set.steps,
+                        nameOf: nameOf,
+                        measurementOf: measurementOf,
+                        onAdjust: { index, field, up in
+                            var steps = set.steps
+                            if steps.indices.contains(index) {
+                                field.bumpStep(&steps[index], up: up)
+                                set.steps = steps
+                                set.applySteps(sequence: sequence)
+                            }
+                        }
+                    )
+                } else {
+                    ForEach(SetField.primary(measurement)) { field in
+                        NumberDial(field: field, set: $set)
+                    }
                 }
 
                 if extras {
@@ -310,7 +368,9 @@ struct LiveLogSheet: View {
 
                 VStack(spacing: 10) {
                     LVCta(mood: mode == .edit ? .done : .active) {
-                        onSave(set)
+                        var saved = set
+                        saved.applySteps(sequence: sequence)
+                        onSave(saved)
                         dismiss()
                     } content: {
                         Image(systemName: "checkmark")
@@ -346,7 +406,9 @@ enum LiveFormat {
     static func set(_ set: WorkoutSet) -> String {
         var parts: [String] = []
         let weight = set.weightKg.flatMap { $0 > 0 ? "+\($0.short(2)) kg" : nil }
-        if let reps = set.reps {
+        if let stepped = set.stepsSummary {
+            parts.append(weight.map { "\(stepped) × \($0)" } ?? stepped)
+        } else if let reps = set.reps {
             parts.append(weight.map { "\(reps) × \($0)" } ?? String(localized: "\(reps) powt."))
         } else if let weight {
             parts.append(weight)

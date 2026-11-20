@@ -68,10 +68,14 @@ enum SetFormat {
     /// Compact one-line description of a logged set, e.g. "8 powt. · +10 kg · RPE 8".
     static func summary(_ set: WorkoutSet) -> String {
         var parts: [String] = []
-        if let reps = set.reps { parts.append(String(localized: "\(reps) powt.")) }
-        if let hold = set.holdSeconds { parts.append(durationText(seconds: hold)) }
+        if let stepped = set.stepsSummary {
+            parts.append(stepped)
+        } else if let reps = set.reps {
+            parts.append(String(localized: "\(reps) powt."))
+        }
+        if set.stepsSummary == nil, let hold = set.holdSeconds { parts.append(durationText(seconds: hold)) }
         if let distance = set.distanceM { parts.append("\(distance.short()) m") }
-        if let duration = set.durationSeconds { parts.append(durationText(seconds: Double(duration))) }
+        if set.stepsSummary == nil, let duration = set.durationSeconds { parts.append(durationText(seconds: Double(duration))) }
         if let weight = set.weightKg, weight > 0 { parts.append("+\(weight.short(2)) kg") }
         if set.assistance != "none" {
             let note = set.assistanceNote.trimmingCharacters(in: .whitespaces)

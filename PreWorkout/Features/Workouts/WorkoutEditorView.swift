@@ -106,7 +106,7 @@ struct WorkoutEditorView: View {
         let measurement = exercises.byId[value.exerciseId]?.measurement ?? "reps"
         return Section {
             ForEach(Array(exercise.sets.enumerated()), id: \.element.wrappedValue.id) { item in
-                setRow(item.element, number: item.offset + 1, measurement: measurement)
+                setRow(item.element, number: item.offset + 1, measurement: measurement, sequence: value.sequence)
             }
             .onDelete { offsets in exercise.wrappedValue.sets.remove(atOffsets: offsets) }
 
@@ -120,7 +120,7 @@ struct WorkoutEditorView: View {
             TextField("Notatka do ćwiczenia", text: exercise.notes, axis: .vertical)
         } header: {
             HStack {
-                Text(exercises.name(value.exerciseId))
+                Text(comboTitle(value))
                 Spacer()
                 Menu {
                     Button("Przenieś wyżej", systemImage: "arrow.up") { move(value.id, by: -1) }
@@ -139,9 +139,14 @@ struct WorkoutEditorView: View {
         }
     }
 
-    private func setRow(_ set: Binding<DraftSet>, number: Int, measurement: String) -> some View {
+    private func comboTitle(_ exercise: DraftExercise) -> String {
+        let ids = exercise.sequence.count > 1 ? exercise.sequence : [exercise.exerciseId]
+        return ids.map { exercises.name($0) }.joined(separator: " → ")
+    }
+
+    private func setRow(_ set: Binding<DraftSet>, number: Int, measurement: String, sequence: [String]) -> some View {
         NavigationLink {
-            SetEditorView(set: set.value, measurement: measurement, number: number)
+            SetEditorView(set: set.value, measurement: measurement, number: number, sequence: sequence, nameOf: { exercises.name($0) }, measurementOf: { exercises.byId[$0]?.measurement ?? "reps" })
         } label: {
             HStack(alignment: .firstTextBaseline) {
                 Text(verbatim: "\(number).")
@@ -192,10 +197,20 @@ struct SetEditorView: View {
     @Binding var set: WorkoutSet
     let measurement: String
     let number: Int
+    var sequence: [String] = []
+    var nameOf: (String) -> String = { $0 }
+    var measurementOf: (String) -> String = { _ in "reps" }
 
     var body: some View {
         Form {
             Section("Wynik") {
+                if sequence.count > 1 {
+                    ForEach(Array(sequence.enumerated()), id: \.offset) { index, id in
+                        let field = SetField.forMeasurement(measurementOf(id))
+                        let label = nameOf(id)
+                        stepField(label: label, field: field, index: index)
+                    }
+                } else {
                 switch measurement {
                 case "hold":
                     DecimalField("Czas utrzymania", value: $set.holdSeconds, unit: "s")
@@ -207,6 +222,7 @@ struct SetEditorView: View {
                     IntField("Czas", value: $set.durationSeconds, unit: "s")
                 default:
                     IntField("Powtórzenia", value: $set.reps)
+                }
                 }
                 Toggle("Seria rozgrzewkowa", isOn: $set.isWarmup)
             }
@@ -251,5 +267,50 @@ struct SetEditorView: View {
         }
         .navigationTitle(String(localized: "Seria \(number)"))
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: set.steps) { _, _ in
+            set.applySteps(sequence: sequence)
+        }
+    }
+
+    @ViewBuilder
+    private func stepField(label: String, field: SetField, index: Int) -> some View {
+        let step = set.steps[safe: index] ?? WorkoutSetStep(exerciseId: sequence[safe: index] ?? "")
+        switch field {
+        case .hold:
+            DecimalField(LocalizedStringKey(label), value: Binding(
+                get: { step.holdSeconds },
+                set: { updateStep(index, field: field, hold: $0) }
+            ), unit: "s")
+        case .duration:
+            IntField(LocalizedStringKey(label), value: Binding(
+                get: { step.durationSeconds },
+                set: { updateStep(index, field: field, duration: $0) }
+            ), unit: "s")
+        default:
+            IntField(LocalizedStringKey(label), value: Binding(
+                get: { step.reps },
+                set: { updateStep(index, field: field, reps: $0) }
+            ))
+        }
+    }
+
+    private func updateStep(index: Int, field: SetField, reps: Int? = nil, hold: Double? = nil, duration: Int? = nil) {
+        var steps = set.steps
+        if steps.isEmpty {
+            steps = sequence.map { WorkoutSet.defaultStep($0, measurementOf($0), hint: set) }
+            // defaultStep(hint: WorkoutSet) fills last only; for editing, start from last-value on last step.
+        }
+        while steps.count < sequence.count {
+            let id = sequence[steps.count]
+            steps.append(WorkoutSetStep(exerciseId: id))
+        }
+        guard steps.indices.contains(index) else { return }
+        switch field {
+        case .hold: steps[index].holdSeconds = hold
+        case .duration: steps[index].durationSeconds = duration
+        default: steps[index].reps = reps
+        }
+        set.steps = steps
+        set.applySteps(sequence: sequence)
     }
 }

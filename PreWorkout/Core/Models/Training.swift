@@ -142,6 +142,35 @@ struct ExerciseInput: Encodable, Equatable {
 
 // MARK: Workouts
 
+/// Per-movement values inside a combo set; [] = single-value / legacy set.
+struct WorkoutSetStep: Codable, Hashable {
+    var exerciseId: String
+    var reps: Int? = nil
+    var holdSeconds: Double? = nil
+    var durationSeconds: Int? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case exerciseId, reps, holdSeconds, durationSeconds
+    }
+
+    var hasValue: Bool { reps != nil || holdSeconds != nil || durationSeconds != nil }
+
+    var valueText: String {
+        if let reps { return String(reps) }
+        if let holdSeconds { return "\(holdSeconds.short(0))s" }
+        if let durationSeconds { return "\(durationSeconds)s" }
+        return "–"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(exerciseId, forKey: .exerciseId)
+        try c.encode(reps, forKey: .reps)
+        try c.encode(holdSeconds, forKey: .holdSeconds)
+        try c.encode(durationSeconds, forKey: .durationSeconds)
+    }
+}
+
 struct WorkoutSet: Codable, Hashable {
     var isWarmup: Bool = false
     var reps: Int?
@@ -156,10 +185,12 @@ struct WorkoutSet: Codable, Hashable {
     var rir: Int?
     var restSeconds: Int?
     var notes: String = ""
+    /// Per-step reps/duration for a combo; omitted or [] on older payloads.
+    var steps: [WorkoutSetStep] = []
 
     private enum CodingKeys: String, CodingKey {
         case isWarmup, reps, holdSeconds, weightKg, distanceM, durationSeconds
-        case assistance, assistanceNote, rpe, rir, restSeconds, notes
+        case assistance, assistanceNote, rpe, rir, restSeconds, notes, steps
     }
 
     init() {}
@@ -178,6 +209,7 @@ struct WorkoutSet: Codable, Hashable {
         rir = try c.decodeIfPresent(Int.self, forKey: .rir)
         restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        steps = try c.decodeIfPresent([WorkoutSetStep].self, forKey: .steps) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -194,6 +226,78 @@ struct WorkoutSet: Codable, Hashable {
         try c.encode(rir, forKey: .rir)
         try c.encode(restSeconds, forKey: .restSeconds)
         try c.encode(notes, forKey: .notes)
+        try c.encode(steps, forKey: .steps)
+    }
+
+    /// "1 / 5 / 1" when steps exist.
+    var stepsSummary: String? {
+        steps.isEmpty ? nil : steps.map(\.valueText).joined(separator: " / ")
+    }
+
+    /// Align steps to the combo sequence and copy the last step onto top-level fields.
+    mutating func applySteps(sequence: [String]) {
+        guard sequence.count > 1 else {
+            steps = []
+            return
+        }
+        guard !steps.isEmpty else { return }
+        steps = sequence.enumerated().map { index, id in
+            let byIndex = steps[safe: index]
+            let source = byIndex?.exerciseId == id ? byIndex : (steps.first { $0.exerciseId == id } ?? byIndex)
+            return WorkoutSetStep(
+                exerciseId: id,
+                reps: source?.reps,
+                holdSeconds: source?.holdSeconds,
+                durationSeconds: source?.durationSeconds
+            )
+        }
+        if let last = steps.last {
+            reps = last.reps
+            holdSeconds = last.holdSeconds
+            durationSeconds = last.durationSeconds
+        }
+    }
+
+    static func defaultSteps(
+        sequence: [String],
+        measurementOf: (String) -> String,
+        hint: WorkoutSet?
+    ) -> [WorkoutSetStep] {
+        guard sequence.count > 1 else { return [] }
+        if let hint, !hint.steps.isEmpty {
+            var aligned = hint
+            aligned.applySteps(sequence: sequence)
+            return sequence.enumerated().map { index, id in
+                let existing = aligned.steps[safe: index]
+                if let existing, existing.hasValue { return existing }
+                return defaultStep(id, measurementOf(id), hint: existing)
+            }
+        }
+        return sequence.enumerated().map { index, id in
+            defaultStep(id, measurementOf(id), hint: index == sequence.count - 1 ? hint : Optional<WorkoutSet>.none)
+        }
+    }
+
+    static func defaultStep(_ exerciseId: String, _ measurement: String, hint: WorkoutSetStep? = nil) -> WorkoutSetStep {
+        switch measurement {
+        case "hold":
+            return WorkoutSetStep(exerciseId: exerciseId, holdSeconds: hint?.holdSeconds ?? 1)
+        case "distance_time":
+            return WorkoutSetStep(exerciseId: exerciseId, durationSeconds: hint?.durationSeconds ?? 1)
+        default:
+            return WorkoutSetStep(exerciseId: exerciseId, reps: hint?.reps ?? 1)
+        }
+    }
+
+    static func defaultStep(_ exerciseId: String, _ measurement: String, hint: WorkoutSet?) -> WorkoutSetStep {
+        switch measurement {
+        case "hold":
+            return WorkoutSetStep(exerciseId: exerciseId, holdSeconds: hint?.holdSeconds ?? 1)
+        case "distance_time":
+            return WorkoutSetStep(exerciseId: exerciseId, durationSeconds: hint?.durationSeconds ?? 1)
+        default:
+            return WorkoutSetStep(exerciseId: exerciseId, reps: hint?.reps ?? 1)
+        }
     }
 }
 
