@@ -9,33 +9,63 @@ struct CaloriesView: View {
     }
 }
 
+/// Everything the calculator shows, kept per person on the phone so the tab
+/// opens with real values at once. Empty until something is known: no
+/// made-up defaults.
+struct CalculatorCache: Codable, Equatable {
+    var male: Bool?
+    var age: Int?
+    var height: Double?
+    var weight: Double?
+    var weightDate: String?
+    var activity: Double?
+    /// Last values seen on the server: applied again only when they change there,
+    /// so a local edit isn't overwritten by every refresh.
+    var serverSex: String?
+    var serverAge: Int?
+    var serverHeight: Double?
+    var serverWeight: Double?
+    var serverWeightDate: String?
+    var goal: NutritionGoal?
+    var goalLoaded = false
+    var history: [NutritionGoalVersion] = []
+
+    private static func key(_ person: String) -> String { "preworkout.calculator.\(person)" }
+
+    static func load(_ person: String) -> CalculatorCache? {
+        guard let data = UserDefaults.standard.data(forKey: key(person)) else { return nil }
+        return try? JSONDecoder().decode(CalculatorCache.self, from: data)
+    }
+
+    func save(_ person: String) {
+        if let data = try? JSONEncoder().encode(self) { UserDefaults.standard.set(data, forKey: Self.key(person)) }
+    }
+}
+
 struct CalculatorView: View {
     @Environment(AppState.self) private var appState
 
-    // Calculator inputs (not saved, prefilled from the profile and the diary)
-    @State private var male = true
-    @State private var age: Int? = Calculator.defaultAge
-    @State private var height: Double? = Double(Calculator.defaultHeight)
-    @State private var weight: Double? = Calculator.defaultWeight
-    @State private var activity = Calculator.defaultActivity
-    @State private var prefilled = false
-    @State private var weightNote: String?
+    @State private var data = CalculatorCache()
+    @State private var restored = false
 
     // Saved goal
     @State private var goalState: LoadState<NutritionGoal?> = .idle
-    @State private var history: [NutritionGoalVersion] = []
     @State private var goal = NutritionGoalInput()
     @State private var saving = false
+    @State private var savingPlan: Int?
     @State private var error: String?
     @State private var saved = 0
-    @State private var picked = 0
     @State private var confirmClear = false
+    @State private var confirmPlanOff = false
     @State private var showEquation = false
 
     private var result: Calculator.Result? {
-        guard let age, let height, let weight, age > 0, height > 0, weight > 0 else { return nil }
+        guard let male = data.male, let age = data.age, let height = data.height, let weight = data.weight,
+              let activity = data.activity, age > 0, height > 0, weight > 0 else { return nil }
         return Calculator.calculate(male: male, age: age, heightCm: height, weightKg: weight, activity: activity)
     }
+
+    private var savedGoal: NutritionGoal? { goalState.value ?? nil }
 
     var body: some View {
         Form {
@@ -43,6 +73,14 @@ struct CalculatorView: View {
             if let result {
                 resultSection(result)
                 plansSection(result)
+            } else {
+                Section {
+                    Label("Uzupełnij płeć, wiek, wzrost, wagę i aktywność, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.",
+                          systemImage: "list.bullet.clipboard")
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Plan kaloryczny")
+                }
             }
             goalSection
             historySection
@@ -50,47 +88,54 @@ struct CalculatorView: View {
         }
         .navigationTitle("Kalorie")
         .scrollDismissesKeyboard(.interactively)
-        .refreshable { await load(prefill: false) }
+        .refreshable { await refresh() }
         .sensoryFeedback(.success, trigger: saved)
-        .sensoryFeedback(.selection, trigger: picked)
         .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
         .confirmationDialog("Usunąć cel dzienny?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Usuń cel", role: .destructive) { Task { await save(clear: true) } }
         } message: {
             Text("Usunięcie zostanie zapisane w historii celu.")
         }
-        .task {
-            if goalState.isIdle { await load(prefill: true) }
+        .confirmationDialog("Wyłączyć plan kaloryczny?", isPresented: $confirmPlanOff, titleVisibility: .visible) {
+            Button("Wyłącz plan", role: .destructive) { Task { await save(clear: true) } }
+        } message: {
+            Text("Cel dzienny zostanie usunięty. Zmiana trafi do historii celu.")
         }
+        .onAppear(perform: restore)
+        .onChange(of: data) { _, value in value.save(appState.activePersonId) }
+        .task { await refresh() }
     }
 
     // MARK: Sections
 
     private var inputSection: some View {
         Section {
-            Picker("Płeć", selection: $male) {
-                Text("Mężczyzna").tag(true)
-                Text("Kobieta").tag(false)
+            Picker("Płeć", selection: $data.male) {
+                Text("Mężczyzna").tag(Bool?.some(true))
+                Text("Kobieta").tag(Bool?.some(false))
             }
             .pickerStyle(.segmented)
             .listRowSeparator(.hidden)
-            IntField("Wiek", value: $age, unit: String(localized: "lat"))
-            DecimalField("Wzrost", value: $height, unit: "cm")
-            DecimalField("Waga", value: $weight, unit: "kg")
-            Picker("Poziom aktywności", selection: $activity) {
+            IntField("Wiek", value: $data.age, unit: String(localized: "lat"))
+            DecimalField("Wzrost", value: $data.height, unit: "cm")
+            DecimalField("Waga", value: $data.weight, unit: "kg")
+            Picker("Poziom aktywności", selection: $data.activity) {
+                Text("Wybierz").tag(Double?.none)
                 ForEach(Calculator.activities) { option in
                     VStack(alignment: .leading) {
                         Text(option.title)
                         Text(option.detail).font(.caption).foregroundStyle(.secondary)
                     }
-                    .tag(option.value)
+                    .tag(Double?.some(option.value))
                 }
             }
             .pickerStyle(.navigationLink)
         } header: {
             Text("Twoje dane")
         } footer: {
-            if let weightNote { Text(weightNote) }
+            if let date = data.weightDate, data.weight != nil, data.weight == data.serverWeight {
+                Text("Waga z dziennika: \(DayString.label(date)).")
+            }
         }
     }
 
@@ -117,48 +162,116 @@ struct CalculatorView: View {
         }
     }
 
+    private struct Plan: Identifiable {
+        let id: String
+        let title: LocalizedStringKey
+        let kcal: Int
+        let deficit: Int
+        let color: Color
+        let icon: String
+    }
+
+    private func plans(_ result: Calculator.Result) -> [Plan] {
+        [
+            Plan(id: "maintain", title: "Utrzymanie wagi", kcal: result.maintain, deficit: 0, color: .green, icon: "scalemass"),
+            Plan(id: "mild", title: "Łagodna utrata wagi", kcal: result.mild, deficit: Calculator.mildDeficit, color: .yellow, icon: "chart.line.downtrend.xyaxis"),
+            Plan(id: "loss", title: "Utrata wagi", kcal: result.loss, deficit: Calculator.moderateDeficit, color: .orange, icon: "arrow.down"),
+            Plan(id: "extreme", title: "Ekstremalna utrata wagi", kcal: result.extreme, deficit: Calculator.extremeDeficit, color: .red, icon: "bolt.fill"),
+        ]
+    }
+
+    /// Active plan = the saved daily goal's calories.
+    private var activeKcal: Int? { savedGoal?.kcal.map { Calculator.jsRound($0) } }
+
     private func plansSection(_ result: Calculator.Result) -> some View {
-        Section {
-            planRow("Utrzymanie wagi", kcal: result.maintain, deficit: 0, color: .green, icon: "scalemass")
-            planRow("Łagodna utrata wagi", kcal: result.mild, deficit: Calculator.mildDeficit, color: .yellow, icon: "chart.line.downtrend.xyaxis")
-            planRow("Utrata wagi", kcal: result.loss, deficit: Calculator.moderateDeficit, color: .orange, icon: "arrow.down")
-            planRow("Ekstremalna utrata wagi", kcal: result.extreme, deficit: Calculator.extremeDeficit, color: .red, icon: "bolt.fill")
+        let list = plans(result)
+        let active = activeKcal
+        let matches = list.contains { $0.kcal == active }
+        return Section {
+            ForEach(list) { plan in
+                planCard(plan, isActive: plan.kcal == active)
+            }
+            if let active, !matches {
+                HStack(spacing: 12) {
+                    Image(systemName: "target")
+                        .foregroundStyle(.tint)
+                        .frame(width: 36, height: 36)
+                        .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Własny cel")
+                        Text("Nie pasuje do żadnego planu").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(verbatim: "\(active.grouped) kcal").font(.headline).monospacedDigit()
+                    ActiveBadge()
+                }
+            }
+            if active != nil {
+                Button("Wyłącz plan", systemImage: "xmark.circle", role: .destructive) { confirmPlanOff = true }
+                    .disabled(saving)
+            }
         } header: {
-            Text("Plany kaloryczne")
+            Text("Wybierz plan kaloryczny")
         } footer: {
-            Text("Dotknij planu, aby wpisać jego kalorie do celu dziennego.")
+            if active == nil {
+                Text("Nie masz aktywnego planu. Dotknij planu, aby ustawić go jako cel dzienny.")
+            } else {
+                Text("Dotknij innego planu, aby go zmienić. Dotknij aktywnego planu albo „Wyłącz plan”, aby go wyłączyć.")
+            }
         }
     }
 
-    private func planRow(_ title: LocalizedStringKey, kcal: Int, deficit: Int, color: Color, icon: String) -> some View {
+    private func planCard(_ plan: Plan, isActive: Bool) -> some View {
         Button {
-            goal.kcal = Double(kcal)
-            picked += 1
+            if isActive {
+                confirmPlanOff = true
+            } else {
+                Task { await choose(plan.kcal) }
+            }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: icon)
+                Image(systemName: plan.icon)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(color)
-                    .frame(width: 32, height: 32)
-                    .background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(isActive ? .white : plan.color)
+                    .frame(width: 36, height: 36)
+                    .background(isActive ? plan.color : plan.color.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).foregroundStyle(.primary)
-                    if deficit > 0 {
-                        Text("−\(deficit) kcal deficytu")
+                    Text(plan.title)
+                        .fontWeight(isActive ? .semibold : .regular)
+                        .foregroundStyle(.primary)
+                    if plan.deficit > 0 {
+                        Text("−\(plan.deficit) kcal deficytu")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(kcal.grouped).font(.headline).monospacedDigit().foregroundStyle(.primary)
-                    Text("kcal / dzień").font(.caption2).foregroundStyle(.secondary)
+                Spacer(minLength: 6)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(plan.kcal.grouped).font(.headline).monospacedDigit().foregroundStyle(.primary)
+                    if isActive {
+                        ActiveBadge()
+                    } else {
+                        Text("kcal / dzień").font(.caption2).foregroundStyle(.secondary)
+                    }
                 }
-                if goal.kcal == Double(kcal) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
+                Group {
+                    if savingPlan == plan.kcal {
+                        ProgressView()
+                    } else {
+                        Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                            .font(.title2)
+                            .foregroundStyle(isActive ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
+                    }
                 }
+                .frame(width: 28)
             }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
+        .disabled(saving)
+        .listRowBackground(isActive ? plan.color.opacity(0.12) : Color(.secondarySystemGroupedBackground))
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+        .accessibilityHint(isActive ? Text("Dotknij, aby wyłączyć plan") : Text("Dotknij, aby ustawić jako cel dzienny"))
     }
 
     @ViewBuilder
@@ -169,7 +282,7 @@ struct CalculatorView: View {
                 ProgressView().frame(maxWidth: .infinity)
             case .failed(let message):
                 ErrorText(message: message)
-                Button("Spróbuj ponownie") { Task { await load(prefill: false) } }
+                Button("Spróbuj ponownie") { Task { await refresh() } }
             case .loaded(let current):
                 if let current, let updated = current.updatedAt {
                     LabeledContent("Zapisany cel") {
@@ -182,19 +295,13 @@ struct CalculatorView: View {
                 DecimalField("Białko", value: $goal.protein, unit: "g")
                 DecimalField("Tłuszcz", value: $goal.fat, unit: "g")
                 DecimalField("Węglowodany", value: $goal.carbs, unit: "g")
-                if let weight, weight > 0 {
-                    Button("Zaproponuj makro dla \(weight.short()) kg", systemImage: "wand.and.stars") {
-                        suggest(weightKg: weight)
-                    }
-                    .disabled((goal.kcal ?? 0) <= 0)
-                }
                 Button {
                     Task { await save(clear: false) }
                 } label: {
                     HStack {
                         Text("Zapisz cel").bold()
                         Spacer()
-                        if saving { ProgressView() }
+                        if saving && savingPlan == nil { ProgressView() }
                     }
                 }
                 .disabled(saving || (goal.kcal ?? 0) <= 0)
@@ -213,13 +320,13 @@ struct CalculatorView: View {
 
     @ViewBuilder
     private var historySection: some View {
-        if history.count >= 2 {
+        if data.history.count >= 2 {
             Section {
-                ForEach(history.prefix(6)) { version in
+                ForEach(data.history.prefix(6)) { version in
                     GoalVersionRow(version: version)
                 }
-                if history.count > 6 {
-                    NavigationLink("Cała historia") { GoalHistoryView(history: history) }
+                if data.history.count > 6 {
+                    NavigationLink("Cała historia") { GoalHistoryView(history: data.history) }
                 }
             } header: {
                 Text("Historia celu")
@@ -251,43 +358,74 @@ struct CalculatorView: View {
         }
     }
 
-    // MARK: Actions
+    // MARK: Data
 
-    private func suggest(weightKg: Double) {
-        guard let kcal = goal.kcal, kcal > 0 else { return }
-        let macros = Calculator.suggestMacros(kcal: kcal, weightKg: weightKg)
-        goal.protein = macros.protein
-        goal.fat = macros.fat
-        goal.carbs = macros.carbs
-        picked += 1
+    private static func input(_ g: NutritionGoal?) -> NutritionGoalInput {
+        NutritionGoalInput(kcal: g?.kcal, protein: g?.protein, fat: g?.fat, carbs: g?.carbs)
     }
 
-    private func load(prefill: Bool) async {
+    /// Cached values first (no flash of defaults or spinners).
+    private func restore() {
+        guard !restored else { return }
+        restored = true
+        guard let cached = CalculatorCache.load(appState.activePersonId) else { return }
+        data = cached
+        if cached.goalLoaded {
+            goalState = .loaded(cached.goal)
+            goal = Self.input(cached.goal)
+        }
+    }
+
+    /// Silent refresh from the server; only what changed there is applied.
+    private func refresh() async {
+        restore()
         let person = appState.activePersonId
         if goalState.value == nil { goalState = .loading }
         async let goalTask = APIClient.shared.goal(person: person)
         async let historyTask = APIClient.shared.goalHistory(person: person)
+        async let settingsTask = APIClient.shared.settings(person: person)
+        async let weightTask = APIClient.shared.latestWeight(person: person)
         do {
             let current = try await goalTask
+            // Keep unsaved edits of the goal fields.
+            if goal == Self.input(data.goal) || !data.goalLoaded { goal = Self.input(current) }
             goalState = .loaded(current)
-            goal = NutritionGoalInput(kcal: current?.kcal, protein: current?.protein,
-                                      fat: current?.fat, carbs: current?.carbs)
+            data.goal = current
+            data.goalLoaded = true
         } catch {
             if !Task.isCancelled && goalState.value == nil { goalState = .failed(error.localizedDescription) }
         }
-        history = ((try? await historyTask) ?? []).sorted { $0.validFrom > $1.validFrom }
+        if let history = try? await historyTask {
+            data.history = history.sorted { $0.validFrom > $1.validFrom }
+        }
+        if let settings = try? await settingsTask {
+            if !settings.sex.isEmpty, settings.sex != data.serverSex {
+                data.serverSex = settings.sex
+                data.male = settings.sex == "male"
+            }
+            if let age = Int(settings.age), age > 0, age != data.serverAge {
+                data.serverAge = age
+                data.age = age
+            }
+            if let height = Double(settings.height), height > 0, height != data.serverHeight {
+                data.serverHeight = height
+                data.height = height
+            }
+        }
+        if let latest = try? await weightTask, latest.kg != data.serverWeight || latest.date != data.serverWeightDate {
+            data.serverWeight = latest.kg
+            data.serverWeightDate = latest.date
+            data.weight = latest.kg
+            data.weightDate = latest.date
+        }
+    }
 
-        guard prefill, !prefilled else { return }
-        prefilled = true
-        if let settings = try? await APIClient.shared.settings(person: person) {
-            if settings.sex == "female" { male = false } else if settings.sex == "male" { male = true }
-            if let value = Int(settings.age), value > 0 { age = value }
-            if let value = Double(settings.height), value > 0 { height = value }
-        }
-        if let latest = try? await APIClient.shared.latestWeight(person: person) {
-            weight = latest.kg
-            weightNote = String(localized: "Waga z dziennika: \(DayString.label(latest.date)).")
-        }
+    /// Plan picked: its calories become the daily goal right away (macros stay).
+    private func choose(_ kcal: Int) async {
+        savingPlan = kcal
+        defer { savingPlan = nil }
+        goal.kcal = Double(kcal)
+        await save(clear: false)
     }
 
     private func save(clear: Bool) async {
@@ -313,13 +451,29 @@ struct CalculatorView: View {
             let saved = try await APIClient.shared.saveGoal(body, person: appState.activePersonId)
             let isEmpty = saved.kcal == nil && saved.protein == nil && saved.fat == nil && saved.carbs == nil
             goalState = .loaded(isEmpty ? nil : saved)
+            data.goal = isEmpty ? nil : saved
+            data.goalLoaded = true
             goal = body
             self.saved += 1
-            history = ((try? await APIClient.shared.goalHistory(person: appState.activePersonId)) ?? history)
-                .sorted { $0.validFrom > $1.validFrom }
+            if let history = try? await APIClient.shared.goalHistory(person: appState.activePersonId) {
+                data.history = history.sorted { $0.validFrom > $1.validFrom }
+            }
         } catch {
             self.error = error.localizedDescription
         }
+    }
+}
+
+/// Green "Active" capsule on the active calorie plan.
+private struct ActiveBadge: View {
+    var body: some View {
+        Text("Aktywny")
+            .font(.caption2.weight(.bold))
+            .textCase(.uppercase)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(.green, in: Capsule())
     }
 }
 

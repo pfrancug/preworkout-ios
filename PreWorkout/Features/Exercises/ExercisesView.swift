@@ -11,6 +11,7 @@ struct ExercisesView: View {
     @State private var customOnly = false
     @State private var showArchived = false
     @State private var creating = false
+    @State private var choosingDatasets = false
 
     var body: some View {
         NavigationStack {
@@ -27,6 +28,14 @@ struct ExercisesView: View {
                             ExerciseDetailView(exerciseId: exercise.id)
                         } label: {
                             ExerciseRow(exercise: exercise)
+                        }
+                    }
+                } header: {
+                    if !store.hiddenDatasets.isEmpty {
+                        Button { choosingDatasets = true } label: {
+                            Label("Część zbiorów jest wyłączona. Zmień", systemImage: "square.stack.3d.up.slash")
+                                .font(.footnote)
+                                .textCase(nil)
                         }
                     }
                 } footer: {
@@ -52,12 +61,20 @@ struct ExercisesView: View {
             .navigationTitle("Ćwiczenia")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { filterMenu }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Zbiory ćwiczeń", systemImage: store.hiddenDatasets.isEmpty ? "square.stack.3d.up" : "square.stack.3d.up.fill") {
+                        choosingDatasets = true
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Nowe ćwiczenie", systemImage: "plus") { creating = true }
                 }
             }
             .sheet(isPresented: $creating) {
                 ExerciseEditorView(exercise: nil)
+            }
+            .sheet(isPresented: $choosingDatasets) {
+                ExerciseDatasetsView()
             }
             .task { await store.loadIfNeeded() }
             .task(id: query) { await search() }
@@ -98,7 +115,8 @@ struct ExercisesView: View {
     private var visible: [Exercise] {
         let base = query.trimmingCharacters(in: .whitespaces).isEmpty ? store.all : (results ?? localMatches)
         return base.filter { e in
-            (showArchived || !e.archived)
+            store.isEnabled(e)
+                && (showArchived || !e.archived)
                 && (!customOnly || e.isCustom)
                 && (modality == nil || e.modality == modality)
                 && (category == nil || e.category == category)
@@ -128,5 +146,59 @@ struct ExercisesView: View {
         } catch {
             if !Task.isCancelled { results = nil }
         }
+    }
+}
+
+/// Sheet: switch whole exercise datasets on or off (kept on the phone).
+struct ExerciseDatasetsView: View {
+    @Environment(ExerciseStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(store.datasets) { item in
+                        Toggle(isOn: Binding(
+                            get: { store.isEnabledDataset(item.dataset.key) },
+                            set: { store.setDataset(item.dataset.key, enabled: $0) }
+                        )) {
+                            HStack(spacing: 12) {
+                                Image(systemName: item.dataset.icon)
+                                    .foregroundStyle(.tint)
+                                    .frame(width: 32, height: 32)
+                                    .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: item.dataset.title)
+                                    if let detail = item.dataset.detail {
+                                        Text(verbatim: detail).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Text("Ćwiczeń: \(item.count)").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("Wyłączone zbiory znikają z listy ćwiczeń i z wyboru ćwiczenia w treningach. Twoje zapisane treningi się nie zmieniają.")
+                }
+                if !store.hiddenDatasets.isEmpty {
+                    Section {
+                        Button("Włącz wszystkie", systemImage: "checkmark.circle") {
+                            for item in store.datasets { store.setDataset(item.dataset.key, enabled: true) }
+                        }
+                    }
+                }
+            }
+            .overlay {
+                if store.isLoading && store.all.isEmpty { ProgressView() }
+            }
+            .navigationTitle("Zbiory ćwiczeń")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Gotowe") { dismiss() } }
+            }
+            .task { await store.loadIfNeeded() }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

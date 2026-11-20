@@ -49,9 +49,9 @@ struct ExercisePickerView: View {
 
     private var visible: [Exercise] {
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
-            return store.all.filter { !$0.archived }
+            return store.enabled.filter { !$0.archived }
         }
-        return results ?? localMatches
+        return (results ?? localMatches).filter(store.isEnabled)
     }
 
     private var localMatches: [Exercise] {

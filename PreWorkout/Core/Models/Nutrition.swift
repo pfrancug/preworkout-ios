@@ -3,7 +3,7 @@ import Foundation
 // Shapes mirror `shared/analytics.ts` (goals) and `shared/types.ts` (diary).
 
 /// Saved daily goal of a person (`GET /goals`, null when not set).
-struct NutritionGoal: Decodable, Equatable {
+struct NutritionGoal: Codable, Equatable {
     let kcal: Double?
     let protein: Double?
     let fat: Double?
@@ -30,7 +30,7 @@ struct NutritionGoalInput: Encodable, Equatable {
 }
 
 /// One saved version of the goal; all values nil = goal removed from that date.
-struct NutritionGoalVersion: Decodable, Identifiable, Hashable {
+struct NutritionGoalVersion: Codable, Identifiable, Hashable {
     var id: String { validFrom }
     /// YYYY-MM-DD
     let validFrom: String

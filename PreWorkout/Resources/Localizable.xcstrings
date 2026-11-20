@@ -502,6 +502,16 @@
         }
       }
     },
+    "Cel dzienny zostanie usunięty. Zmiana trafi do historii celu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your daily goal will be removed. The change is kept in the goal history."
+          }
+        }
+      }
+    },
     "Cel osiągnięty": {
       "localizations": {
         "en": {
@@ -648,6 +658,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hold time"
+          }
+        }
+      }
+    },
+    "Część zbiorów jest wyłączona. Zmień": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some datasets are off. Change"
           }
         }
       }
@@ -802,12 +822,12 @@
         }
       }
     },
-    "Dotknij planu, aby wpisać jego kalorie do celu dziennego.": {
+    "Dotknij innego planu, aby go zmienić. Dotknij aktywnego planu albo „Wyłącz plan”, aby go wyłączyć.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a plan to use its calories as the daily goal."
+            "value": "Tap another plan to switch. Tap the active plan or “Turn off plan” to turn it off."
           }
         }
       }
@@ -818,6 +838,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tap to go there. Touch and hold to reorder or change the superset."
+          }
+        }
+      }
+    },
+    "Dotknij, aby ustawić jako cel dzienny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to set as your daily goal"
+          }
+        }
+      }
+    },
+    "Dotknij, aby wyłączyć plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to turn off the plan"
           }
         }
       }
@@ -1472,12 +1512,32 @@
         }
       }
     },
+    "Nie masz aktywnego planu. Dotknij planu, aby ustawić go jako cel dzienny.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No active plan. Tap a plan to set it as your daily goal."
+          }
+        }
+      }
+    },
     "Nie można jeszcze zakończyć": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Not finished yet"
+          }
+        }
+      }
+    },
+    "Nie pasuje do żadnego planu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doesn't match any plan"
           }
         }
       }
@@ -1765,12 +1825,12 @@
         }
       }
     },
-    "Plany kaloryczne": {
+    "Plan kaloryczny": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Calorie plans"
+            "value": "Calorie plan"
           }
         }
       }
@@ -2744,6 +2804,16 @@
         }
       }
     },
+    "Uzupełnij płeć, wiek, wzrost, wagę i aktywność, aby zobaczyć zapotrzebowanie i wybrać plan kaloryczny.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fill in sex, age, height, weight and activity to see your needs and pick a calorie plan."
+          }
+        }
+      }
+    },
     "Waga": {
       "localizations": {
         "en": {
@@ -2934,6 +3004,26 @@
         }
       }
     },
+    "Wybierz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose"
+          }
+        }
+      }
+    },
+    "Wybierz plan kaloryczny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a calorie plan"
+          }
+        }
+      }
+    },
     "Wybierz ćwiczenie": {
       "localizations": {
         "en": {
@@ -2984,12 +3074,42 @@
         }
       }
     },
+    "Wyłącz plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off plan"
+          }
+        }
+      }
+    },
     "Wyłącz z superserii": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Remove from superset"
+          }
+        }
+      }
+    },
+    "Wyłączone zbiory znikają z listy ćwiczeń i z wyboru ćwiczenia w treningach. Twoje zapisane treningi się nie zmieniają.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datasets you turn off disappear from the exercise list and the exercise picker. Your saved workouts stay the same."
+          }
+        }
+      }
+    },
+    "Wyłączyć plan kaloryczny?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off the calorie plan?"
           }
         }
       }
@@ -3050,6 +3170,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom"
+          }
+        }
+      }
+    },
+    "Własne ćwiczenia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your exercises"
+          }
+        }
+      }
+    },
+    "Własny cel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom goal"
+          }
+        }
+      }
+    },
+    "Włącz wszystkie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn all on"
           }
         }
       }
@@ -3184,16 +3334,6 @@
         }
       }
     },
-    "Zaproponuj makro dla %@ kg": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suggest macros for %@ kg"
-          }
-        }
-      }
-    },
     "Zaraz po bieżącym": {
       "localizations": {
         "en": {
@@ -3220,6 +3360,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "An archived exercise stays in your history but no longer appears in pickers."
+          }
+        }
+      }
+    },
+    "Zbiory Martjn i RafaelJaime (Hugging Face)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Martjn and RafaelJaime datasets (Hugging Face)"
+          }
+        }
+      }
+    },
+    "Zbiory ćwiczeń": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercise datasets"
           }
         }
       }
@@ -3290,6 +3450,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "time"
+          }
+        }
+      }
+    },
+    "free-exercise-db: siłownia, mobilność, cardio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "free-exercise-db: gym, mobility, cardio"
           }
         }
       }
@@ -3386,6 +3556,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add exercises as you go. Rest, timers and sets are tracked for you."
+          }
+        }
+      }
+    },
+    "Ćwiczenia dodane przez ciebie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercises you added"
           }
         }
       }

@@ -3,11 +3,6 @@ import Foundation
 /// Mifflin-St Jeor calculator; same constants and rounding as the web app
 /// (`src/pages/Calculator`, `src/constants/storage.ts`, `src/lib/goals.ts`).
 enum Calculator {
-    static let defaultAge = 30
-    static let defaultHeight = 175
-    static let defaultWeight = 75.0
-    static let defaultActivity = 1.725
-
     struct Activity: Identifiable {
         let value: Double
         let title: LocalizedStringResource
@@ -42,14 +37,6 @@ enum Calculator {
         let bmrRaw = 10 * weightKg + 6.25 * heightCm - 5 * Double(age) + (male ? 5 : -161)
         let bmr = jsRound(bmrRaw)
         return Result(bmr: bmr, maintain: jsRound(Double(bmr) * activity))
-    }
-
-    /// Macro suggestion: protein 1.8 g/kg, fat 0.8 g/kg, the rest from carbs.
-    static func suggestMacros(kcal: Double, weightKg: Double) -> (protein: Double, fat: Double, carbs: Double) {
-        let protein = Double(jsRound(1.8 * weightKg))
-        let fat = Double(jsRound(0.8 * weightKg))
-        let rest = kcal - protein * 4 - fat * 9
-        return (protein, fat, Double(max(0, jsRound(rest / 4))))
     }
 
     /// JavaScript `Math.round` (halves round up, also for negatives).
