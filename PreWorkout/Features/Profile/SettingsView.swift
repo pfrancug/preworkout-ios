@@ -14,7 +14,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             if let account = appState.account {
-                Section("Konto") {
+                Section {
                     if let email = account.email, !email.isEmpty {
                         LabeledContent("E-mail", value: email)
                     } else if !account.name.isEmpty {
@@ -37,6 +37,8 @@ struct SettingsView: View {
                         }
                         .disabled(busy)
                     }
+                } header: {
+                    Text("Konto")
                 } footer: {
                     if linkedFeedback {
                         Text("Powiązano konto z Apple ID.")
