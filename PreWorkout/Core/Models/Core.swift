@@ -7,9 +7,30 @@ struct Health: Decodable {
     let ai: Bool
 }
 
+struct Account: Decodable, Equatable {
+    let id: String
+    let name: String
+    let email: String?
+    let appleLinked: Bool
+    let isAdmin: Bool
+}
+
+struct AuthMethods: Decodable, Equatable {
+    let apple: Bool
+    let password: Bool
+}
+
 struct AuthSession: Decodable {
     let required: Bool
     let authenticated: Bool
+    let user: Account?
+    let methods: AuthMethods?
+}
+
+struct AppleAuthResponse: Decodable {
+    let token: String
+    let expiresAt: String
+    let user: Account
 }
 
 struct UserSettings: Codable, Equatable {
@@ -22,8 +43,6 @@ struct UserSettings: Codable, Equatable {
 }
 
 struct Person: Decodable, Identifiable, Hashable {
-    static let ownerId = "owner"
-
     let id: String
     let isOwner: Bool
     let createdAt: String

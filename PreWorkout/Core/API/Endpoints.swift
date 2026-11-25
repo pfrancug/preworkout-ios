@@ -13,6 +13,37 @@ extension APIClient {
 
     func logout() async throws { try await sendNoContent("POST", "/auth/logout") }
 
+    func appleNative(
+        identityToken: String,
+        authorizationCode: String?,
+        nonce: String?,
+        fullName: String?,
+        link: Bool
+    ) async throws -> AppleAuthResponse {
+        struct Body: Encodable {
+            let identityToken: String
+            let authorizationCode: String?
+            let nonce: String?
+            let fullName: String?
+            let link: Bool
+        }
+        return try await send(
+            "POST",
+            "/auth/apple/native",
+            body: Body(
+                identityToken: identityToken,
+                authorizationCode: authorizationCode,
+                nonce: nonce,
+                fullName: fullName,
+                link: link
+            )
+        )
+    }
+
+    func deleteAccount() async throws {
+        try await sendNoContent("DELETE", "/auth/account", body: ["confirm": true])
+    }
+
     // MARK: People + profile
 
     func people() async throws -> [Person] { try await get("/people") }

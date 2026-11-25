@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Global app state: sign-in status, people and the active person.
+/// Global app state: sign-in status, account, people and the active person.
 @MainActor
 @Observable
 final class AppState {
@@ -13,12 +13,22 @@ final class AppState {
     }
 
     private(set) var phase: Phase = .checking
+    private(set) var account: Account?
+    private(set) var passwordLoginAvailable = true
     private(set) var people: [Person] = []
     /// AI endpoints are only available when the server says so (`GET /api/health`).
     private(set) var aiEnabled = false
+    /// Incremented after account deletion so stores drop local preferences too.
+    private(set) var accountDeletedCount = 0
 
     var activePersonId: String {
-        didSet { UserDefaults.standard.set(activePersonId, forKey: Self.activePersonKey) }
+        didSet {
+            if activePersonId.isEmpty {
+                UserDefaults.standard.removeObject(forKey: Self.activePersonKey)
+            } else {
+                UserDefaults.standard.set(activePersonId, forKey: Self.activePersonKey)
+            }
+        }
     }
 
     var activePerson: Person? { people.first { $0.id == activePersonId } }
@@ -28,11 +38,15 @@ final class AppState {
 
     init(api: APIClient = .shared) {
         self.api = api
-        activePersonId = UserDefaults.standard.string(forKey: Self.activePersonKey) ?? Person.ownerId
+        activePersonId = UserDefaults.standard.string(forKey: Self.activePersonKey) ?? ""
         NotificationCenter.default.addObserver(
             forName: .apiUnauthorized, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.phase = .needsLogin }
+            Task { @MainActor in
+                KeychainToken.clear()
+                self?.account = nil
+                self?.phase = .needsLogin
+            }
         }
     }
 
@@ -46,10 +60,14 @@ final class AppState {
             let health = try await api.health()
             aiEnabled = health.ai
             let session = try await api.authSession()
+            passwordLoginAvailable = session.methods?.password ?? true
             if session.required && !session.authenticated {
+                KeychainToken.clear()
+                account = nil
                 phase = .needsLogin
                 return
             }
+            account = session.user
             try await loadPeople()
             phase = .ready
         } catch {
@@ -57,15 +75,77 @@ final class AppState {
         }
     }
 
+    func signInWithApple(_ payload: AppleCredentialPayload) async throws {
+        let response = try await api.appleNative(
+            identityToken: payload.identityToken,
+            authorizationCode: payload.authorizationCode,
+            nonce: payload.nonce,
+            fullName: payload.fullName,
+            link: false
+        )
+        KeychainToken.set(response.token)
+        api.clearSessionCookies()
+        account = response.user
+        activePersonId = ""
+        categories = []
+        categoriesPersonId = nil
+        try await loadPeople()
+        phase = .ready
+    }
+
+    func linkApple(_ payload: AppleCredentialPayload) async throws {
+        let response = try await api.appleNative(
+            identityToken: payload.identityToken,
+            authorizationCode: payload.authorizationCode,
+            nonce: payload.nonce,
+            fullName: payload.fullName,
+            link: true
+        )
+        KeychainToken.set(response.token)
+        api.clearSessionCookies()
+        account = response.user
+        try? await loadPeople()
+    }
+
     func login(password: String) async throws {
         try await api.login(password: password)
+        let session = try await api.authSession()
+        account = session.user
+        passwordLoginAvailable = session.methods?.password ?? true
+        activePersonId = ""
+        categories = []
+        categoriesPersonId = nil
         try await loadPeople()
         phase = .ready
     }
 
     func logout() async {
         try? await api.logout()
+        clearLocalSession(wipeUserDefaults: false)
         phase = .needsLogin
+    }
+
+    func deleteAccount() async throws {
+        try await api.deleteAccount()
+        clearLocalSession(wipeUserDefaults: true)
+        accountDeletedCount += 1
+        phase = .needsLogin
+    }
+
+    private func clearLocalSession(wipeUserDefaults: Bool) {
+        KeychainToken.clear()
+        api.clearSessionCookies()
+        account = nil
+        people = []
+        categories = []
+        categoriesPersonId = nil
+        activePersonId = ""
+        if wipeUserDefaults {
+            if let domain = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: domain)
+            }
+            LiveStore.deleteAllLocalSessions()
+        }
     }
 
     /// Activity categories of the active person (workout category picker).
@@ -73,7 +153,7 @@ final class AppState {
     private var categoriesPersonId: String?
 
     func loadCategoriesIfNeeded() async {
-        guard categoriesPersonId != activePersonId else { return }
+        guard !activePersonId.isEmpty, categoriesPersonId != activePersonId else { return }
         let personId = activePersonId
         if let list = try? await api.categories(person: personId) {
             categories = list
@@ -89,7 +169,7 @@ final class AppState {
     func loadPeople() async throws {
         people = try await api.people()
         if !people.contains(where: { $0.id == activePersonId }) {
-            activePersonId = Person.ownerId
+            activePersonId = people.first(where: \.isOwner)?.id ?? people.first?.id ?? ""
         }
     }
 }

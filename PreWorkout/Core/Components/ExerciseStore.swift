@@ -73,6 +73,16 @@ final class ExerciseStore {
 
     func remove(_ id: String) { set(all.filter { $0.id != id }) }
 
+    func reset(clearPreferences: Bool = false) {
+        all = []
+        byId = [:]
+        loaded = false
+        error = nil
+        if clearPreferences {
+            hiddenDatasets = []
+        }
+    }
+
     private func set(_ list: [Exercise]) {
         all = list.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         byId = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })

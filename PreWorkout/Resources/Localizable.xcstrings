@@ -322,6 +322,16 @@
         }
       }
     },
+    "Apple nie zwrócił tokenu logowania.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple did not return a sign-in token."
+          }
+        }
+      }
+    },
     "Archiwum": {
       "localizations": {
         "en": {
@@ -942,6 +952,16 @@
         }
       }
     },
+    "E-mail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        }
+      }
+    },
     "Edytuj": {
       "localizations": {
         "en": {
@@ -1292,6 +1312,26 @@
         }
       }
     },
+    "Konto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "Konto właściciela zawiera pierwotne dane i nie można go usunąć.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The owner account holds the original data and cannot be deleted."
+          }
+        }
+      }
+    },
     "Lekkie lub umiarkowane ćwiczenia 4–5 dni w tygodniu": {
       "localizations": {
         "en": {
@@ -1338,6 +1378,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exercise list"
+          }
+        }
+      }
+    },
+    "Logowanie hasłem": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password sign-in"
           }
         }
       }
@@ -1568,6 +1618,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not set"
+          }
+        }
+      }
+    },
+    "Nie udało się rozpocząć logowania przez Apple.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not start Sign in with Apple."
           }
         }
       }
@@ -1995,6 +2055,26 @@
         }
       }
     },
+    "Powiązano konto z Apple ID.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account linked with Apple ID."
+          }
+        }
+      }
+    },
+    "Powiąż z Apple": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link with Apple"
+          }
+        }
+      }
+    },
     "Powtórz trening": {
       "localizations": {
         "en": {
@@ -2041,6 +2121,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activity level"
+          }
+        }
+      }
+    },
+    "Połączono z Apple ID": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected with Apple ID"
           }
         }
       }
@@ -2514,6 +2604,26 @@
         }
       }
     },
+    "To Apple ID jest już używane przez inne konto.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Apple ID is already used by another account."
+          }
+        }
+      }
+    },
+    "To konto używa tymczasowego hasła. Powiąż je z Apple ID, aby logować się przez Apple.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account uses the temporary password. Link it with your Apple ID to sign in with Apple."
+          }
+        }
+      }
+    },
     "Trening": {
       "localizations": {
         "en": {
@@ -2594,6 +2704,16 @@
         }
       }
     },
+    "Trwale usuwa konto razem ze wszystkimi profilami, wpisami i własnymi ćwiczeniami.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently deletes your account along with all profiles, logs and custom exercises."
+          }
+        }
+      }
+    },
     "Trzymasz": {
       "localizations": {
         "en": {
@@ -2630,6 +2750,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom only"
+          }
+        }
+      }
+    },
+    "Tymczasowe logowanie dla dotychczasowego konta przed powiązaniem z Apple ID.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temporary sign-in for the existing account before linking an Apple ID."
           }
         }
       }
@@ -2714,6 +2844,16 @@
         }
       }
     },
+    "Usunąć konto?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete account?"
+          }
+        }
+      }
+    },
     "Usunąć ten trening?": {
       "localizations": {
         "en": {
@@ -2764,6 +2904,16 @@
         }
       }
     },
+    "Usuń konto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete account"
+          }
+        }
+      }
+    },
     "Usuń niedokończone": {
       "localizations": {
         "en": {
@@ -2780,6 +2930,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete set"
+          }
+        }
+      }
+    },
+    "Usuń trwale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete permanently"
           }
         }
       }
@@ -2970,6 +3130,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Back to workout"
+          }
+        }
+      }
+    },
+    "Wszystkie Twoje dane zostaną trwale usunięte. Tej operacji nie można cofnąć.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All your data will be permanently deleted. This cannot be undone."
           }
         }
       }

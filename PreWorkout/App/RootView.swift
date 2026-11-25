@@ -2,8 +2,31 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(ExerciseStore.self) private var exercises
+    @Environment(LiveStore.self) private var live
 
     var body: some View {
+        content
+            .onChange(of: appState.phase) { _, newPhase in
+                if case .needsLogin = newPhase {
+                    exercises.reset()
+                    live.unload()
+                }
+            }
+            .onChange(of: appState.accountDeletedCount) { _, _ in
+                exercises.reset(clearPreferences: true)
+                live.unload()
+            }
+            .onChange(of: appState.account?.id) { oldId, newId in
+                if oldId != newId {
+                    exercises.reset()
+                    live.unload()
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch appState.phase {
         case .checking:
             ProgressView()

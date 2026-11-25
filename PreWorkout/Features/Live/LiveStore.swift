@@ -118,6 +118,19 @@ final class LiveStore {
         afterChange()
     }
 
+    func unload() {
+        personId = nil
+        session = nil
+        hydrated.removeAll()
+        presented = false
+        afterChange(save: false)
+    }
+
+    static func deleteAllLocalSessions() {
+        guard let dir = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return }
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent("live", isDirectory: true))
+    }
+
     // MARK: Feedback
 
     func tap() {

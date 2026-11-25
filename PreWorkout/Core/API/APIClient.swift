@@ -27,8 +27,8 @@ private struct ErrorBody: Decodable { let error: String? }
 private struct Empty: Encodable {}
 
 /// JSON client for the PreWorkout Hono API (`/api/*`).
-/// Auth = the same signed httpOnly cookie the web app uses (`POST /api/auth/login`);
-/// URLSession keeps it in the shared cookie storage (valid 180 days).
+/// Auth = Keychain Bearer token from Sign in with Apple (`POST /api/auth/apple/native`);
+/// the shared cookie storage stays active during the transition from `APP_PASSWORD`.
 final class APIClient: @unchecked Sendable {
     static let shared = APIClient()
 
@@ -59,6 +59,9 @@ final class APIClient: @unchecked Sendable {
         var request = URLRequest(url: try url(path))
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token = KeychainToken.get() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -79,6 +82,13 @@ final class APIClient: @unchecked Sendable {
             throw APIError.http(status: http.statusCode, message: message)
         }
         return (data, http)
+    }
+
+    func clearSessionCookies() {
+        let storage = session.configuration.httpCookieStorage ?? .shared
+        for cookie in storage.cookies ?? [] where cookie.name == "pw_session" {
+            storage.deleteCookie(cookie)
+        }
     }
 
     private func decode<T: Decodable>(_ data: Data) throws -> T {

@@ -356,6 +356,24 @@ EN = {
     'Zbiory ćwiczeń': 'Exercise datasets',
     'free-exercise-db: siłownia, mobilność, cardio': 'free-exercise-db: gym, mobility, cardio',
     'Ćwiczenia dodane przez ciebie': 'Exercises you added',
+
+    "Apple nie zwrócił tokenu logowania.": "Apple did not return a sign-in token.",
+    "E-mail": "Email",
+    "Konto": "Account",
+    "Konto właściciela zawiera pierwotne dane i nie można go usunąć.": "The owner account holds the original data and cannot be deleted.",
+    "Logowanie hasłem": "Password sign-in",
+    "Nie udało się rozpocząć logowania przez Apple.": "Could not start Sign in with Apple.",
+    "Powiązano konto z Apple ID.": "Account linked with Apple ID.",
+    "Powiąż z Apple": "Link with Apple",
+    "Połączono z Apple ID": "Connected with Apple ID",
+    "To Apple ID jest już używane przez inne konto.": "This Apple ID is already used by another account.",
+    "To konto używa tymczasowego hasła. Powiąż je z Apple ID, aby logować się przez Apple.": "This account uses the temporary password. Link it with your Apple ID to sign in with Apple.",
+    "Trwale usuwa konto razem ze wszystkimi profilami, wpisami i własnymi ćwiczeniami.": "Permanently deletes your account along with all profiles, logs and custom exercises.",
+    "Tymczasowe logowanie dla dotychczasowego konta przed powiązaniem z Apple ID.": "Temporary sign-in for the existing account before linking an Apple ID.",
+    "Usunąć konto?": "Delete account?",
+    "Usuń konto": "Delete account",
+    "Usuń trwale": "Delete permanently",
+    "Wszystkie Twoje dane zostaną trwale usunięte. Tej operacji nie można cofnąć.": "All your data will be permanently deleted. This cannot be undone.",
 }
 
 # Plural keys: Polish forms (one/few/many/other) and English (one/other).

@@ -1,56 +1,141 @@
+import AuthenticationServices
 import SwiftUI
 
 struct LoginView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @State private var server = ServerConfig.baseURL?.absoluteString ?? ""
     @State private var password = ""
+    @State private var showPasswordLogin = false
+    @State private var pendingNonce: String?
     @State private var busy = false
     @State private var error: String?
-    @FocusState private var passwordFocused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    SecureField("Hasło", text: $password)
-                        .textContentType(.password)
-                        .focused($passwordFocused)
-                        .submitLabel(.go)
-                        .onSubmit(signIn)
-                } footer: {
-                    if let error { Text(error).foregroundStyle(.red) }
-                }
-
-                Section("Serwer") {
-                    TextField("https://…", text: $server)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-
-                Section {
-                    Button(action: signIn) {
-                        HStack {
-                            Spacer()
-                            if busy { ProgressView() } else { Text("Zaloguj").bold() }
-                            Spacer()
-                        }
+                if ServerConfig.bundledURL == nil {
+                    Section("Serwer") {
+                        TextField("https://…", text: $server)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                     }
-                    .disabled(busy || password.isEmpty)
+                }
+
+                Section {
+                    SignInWithAppleButton(.signIn) { request in
+                        configureAppleRequest(request)
+                    } onCompletion: { result in
+                        handleAppleResult(result)
+                    }
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 50)
+                    .disabled(busy)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } footer: {
+                    if let error {
+                        Text(error).foregroundStyle(.red)
+                    }
+                }
+
+                if appState.passwordLoginAvailable {
+                    Section {
+                        DisclosureGroup("Logowanie hasłem", isExpanded: $showPasswordLogin) {
+                            SecureField("Hasło", text: $password)
+                                .textContentType(.password)
+                                .submitLabel(.go)
+                                .onSubmit(signInWithPassword)
+
+                            if ServerConfig.bundledURL != nil {
+                                LabeledContent("Serwer") {
+                                    TextField("https://…", text: $server)
+                                        .keyboardType(.URL)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .multilineTextAlignment(.trailing)
+                                }
+                            }
+
+                            Button(action: signInWithPassword) {
+                                HStack {
+                                    Spacer()
+                                    if busy { ProgressView() } else { Text("Zaloguj").bold() }
+                                    Spacer()
+                                }
+                            }
+                            .disabled(busy || password.isEmpty)
+                        }
+                    } footer: {
+                        Text("Tymczasowe logowanie dla dotychczasowego konta przed powiązaniem z Apple ID.")
+                    }
                 }
             }
             .navigationTitle("PreWorkout")
-            .onAppear { passwordFocused = true }
         }
     }
 
-    private func signIn() {
-        guard !password.isEmpty else { return }
+    private func applyServerURL() -> Bool {
         guard let url = ServerConfig.parse(server) else {
             error = String(localized: "Podaj adres serwera (https://…).")
-            return
+            return false
         }
         ServerConfig.setOverride(url == ServerConfig.bundledURL ? nil : url)
+        return true
+    }
+
+    private func configureAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
+        error = nil
+        do {
+            let nonce = try AppleNonce.random()
+            pendingNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = AppleNonce.sha256(nonce)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {
+        let nonce = pendingNonce
+        pendingNonce = nil
+
+        switch result {
+        case .failure(let err):
+            if let authError = err as? ASAuthorizationError, authError.code == .canceled {
+                return
+            }
+            error = err.localizedDescription
+        case .success(let authorization):
+            guard applyServerURL() else { return }
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let nonce else {
+                error = AppleAuthError.missingToken.localizedDescription
+                return
+            }
+            let payload: AppleCredentialPayload
+            do {
+                payload = try AppleCredentialPayload(credential: credential, nonce: nonce)
+            } catch {
+                self.error = error.localizedDescription
+                return
+            }
+            busy = true
+            error = nil
+            Task {
+                defer { busy = false }
+                do {
+                    try await appState.signInWithApple(payload)
+                } catch {
+                    self.error = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func signInWithPassword() {
+        guard !password.isEmpty, applyServerURL() else { return }
         busy = true
         error = nil
         Task {
