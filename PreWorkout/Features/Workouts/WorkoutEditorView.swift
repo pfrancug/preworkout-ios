@@ -41,6 +41,7 @@ struct WorkoutEditorView: View {
 
                 Section("Notatki") {
                     TextField("Jak poszło?", text: $draft.notes, axis: .vertical)
+                        .maxLength($draft.notes, 4000)
                         .lineLimit(3...10)
                 }
 
@@ -91,14 +92,15 @@ struct WorkoutEditorView: View {
         Section {
             DatePicker("Data", selection: $draft.date, displayedComponents: .date)
             TextField("Tytuł (opcjonalnie)", text: $draft.title)
+                .maxLength($draft.title, 120)
             Picker("Kategoria", selection: $draft.categoryId) {
                 Text("Brak").tag(String?.none)
                 ForEach(appState.categories.filter { $0.archived != true || $0.id == draft.categoryId }) { category in
                     Text(verbatim: "\(category.icon) \(category.name)").tag(Optional(category.id))
                 }
             }
-            IntField("Czas trwania", value: $draft.durationMin, unit: "min")
-            DecimalField("RPE sesji", value: $draft.rpe)
+            IntField("Czas trwania", value: $draft.durationMin, unit: "min", limit: Limits.sessionMinutes)
+            DecimalField("RPE sesji", value: $draft.rpe, limit: Limits.rpe)
         }
     }
 
@@ -135,7 +137,10 @@ struct WorkoutEditorView: View {
             }
 
             TextField("Wariant (opcjonalnie)", text: exercise.variant.orEmpty)
+
+                .maxLength(exercise.variant.orEmpty, 200)
             TextField("Notatka do ćwiczenia", text: exercise.notes, axis: .vertical)
+                .maxLength(exercise.notes, 1000)
         } header: {
             HStack {
                 Text(comboTitle(value))
@@ -170,8 +175,9 @@ struct WorkoutEditorView: View {
         )
         return Group {
             DurationField("Czas", wholeSeconds: set.durationSeconds)
-            IntField("Próby", value: set.attempts)
+            IntField("Próby", value: set.attempts, limit: Limits.attempts)
             TextField("Notatka (opcjonalnie)", text: set.notes, axis: .vertical)
+                .maxLength(set.notes, 500)
         }
     }
 
@@ -252,13 +258,13 @@ struct SetEditorView: View {
                 case "hold":
                     DurationField("Czas utrzymania", seconds: $set.holdSeconds)
                 case "reps_weight":
-                    IntField("Powtórzenia", value: $set.reps)
-                    DecimalField("Ciężar", value: $set.weightKg, unit: "kg")
+                    IntField("Powtórzenia", value: $set.reps, limit: Limits.reps)
+                    DecimalField("Ciężar", value: $set.weightKg, unit: "kg", limit: Limits.loadKg)
                 case "distance_time":
-                    DecimalField("Dystans", value: $set.distanceM, unit: "m")
+                    DecimalField("Dystans", value: $set.distanceM, unit: "m", limit: Limits.distanceM)
                     DurationField("Czas", wholeSeconds: $set.durationSeconds)
                 default:
-                    IntField("Powtórzenia", value: $set.reps)
+                    IntField("Powtórzenia", value: $set.reps, limit: Limits.reps)
                 }
                 }
                 Toggle("Seria rozgrzewkowa", isOn: $set.isWarmup)
@@ -266,7 +272,7 @@ struct SetEditorView: View {
 
             Section {
                 if measurement != "reps_weight" {
-                    DecimalField("Dodatkowy ciężar", value: $set.weightKg, unit: "kg")
+                    DecimalField("Dodatkowy ciężar", value: $set.weightKg, unit: "kg", limit: Limits.loadKg)
                 }
                 Picker("Asysta", selection: $set.assistance) {
                     ForEach(Labels.assistance, id: \.self) { value in
@@ -275,6 +281,7 @@ struct SetEditorView: View {
                 }
                 if set.assistance != "none" {
                     TextField("Opis asysty (np. zielona guma)", text: $set.assistanceNote)
+                        .maxLength($set.assistanceNote, 200)
                 }
             } header: {
                 Text("Obciążenie")
@@ -283,8 +290,8 @@ struct SetEditorView: View {
             }
 
             Section {
-                DecimalField("RPE", value: $set.rpe)
-                IntField("RIR", value: $set.rir)
+                DecimalField("RPE", value: $set.rpe, limit: Limits.rpe)
+                IntField("RIR", value: $set.rir, limit: Limits.rir)
                 DurationField("Przerwa po serii", wholeSeconds: $set.restSeconds)
             } header: {
                 Text("Intensywność")
@@ -294,12 +301,13 @@ struct SetEditorView: View {
 
             Section("Więcej") {
                 if measurement != "reps" && measurement != "reps_weight" {
-                    IntField("Powtórzenia", value: $set.reps)
+                    IntField("Powtórzenia", value: $set.reps, limit: Limits.reps)
                 }
                 if measurement != "hold" {
                     DurationField("Czas utrzymania", seconds: $set.holdSeconds)
                 }
                 TextField("Notatka", text: $set.notes, axis: .vertical)
+                    .maxLength($set.notes, 500)
             }
         }
         .navigationTitle(String(localized: "Seria \(number)"))
@@ -327,7 +335,7 @@ struct SetEditorView: View {
             IntField(LocalizedStringKey(label), value: Binding(
                 get: { step.reps },
                 set: { updateStep(index: index, field: field, reps: $0) }
-            ))
+            ), limit: Limits.reps)
         }
     }
 

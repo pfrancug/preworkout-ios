@@ -3,6 +3,8 @@
 # Regenerate PreWorkout/Resources/Localizable.xcstrings with:
 #   python3 tools/build_xcstrings.py
 EN = {
+    "Wartość musi być w zakresie %@.": "The value must be in the range %@.",
+    "Zmiana zawierała nieprawidłową liczbę i nie została zapisana.": "The change contained an invalid number and was not saved.",
     "Alias": "Alias",
     "Alias może mieć najwyżej 80 znaków.": "An alias can be at most 80 characters.",
     "Aliasy": "Aliases",
@@ -27,7 +29,6 @@ EN = {
     "Ciężar": "Weight",
     "Core": "Core",
     "Czas": "Time",
-    "Czas treningu może mieć najwyżej 1440 min.": "A workout can last at most 1440 min.",
     "Czas trwania": "Duration",
     "Czas utrzymania": "Hold time",
     "Data": "Date",
@@ -102,9 +103,7 @@ EN = {
     "Przenieś wyżej": "Move up",
     "Przerwa po serii": "Rest after set",
     "Płeć": "Sex",
-    "RIR musi być w zakresie 0–10.": "RIR must be between 0 and 10.",
     "RPE 0–10 (wysiłek), RIR 0–10 (powtórzenia w zapasie).": "RPE 0–10 (effort), RIR 0–10 (reps in reserve).",
-    "RPE musi być w zakresie 0–10.": "RPE must be between 0 and 10.",
     "RPE sesji": "Session RPE",
     "Rodzaj": "Type",
     "Rodzina": "Family",
@@ -202,9 +201,6 @@ EN = {
     "Utrzymanie wagi": "Maintain weight",
     "Waga": "Weight",
     "Waga z dziennika: %@.": "Weight from the diary: %@.",
-    "Wartość celu może wynosić najwyżej 20 000.": "A goal value can be at most 20,000.",
-    "Wiek musi być w zakresie 1–150.": "Age must be between 1 and 150.",
-    "Wzrost musi być w zakresie 50–300 cm.": "Height must be between 50 and 300 cm.",
     "Węglowodany": "Carbs",
     "Zapisany cel": "Saved goal",
     "Zapisz cel": "Save goal",

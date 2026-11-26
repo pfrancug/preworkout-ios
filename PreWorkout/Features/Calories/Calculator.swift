@@ -40,7 +40,7 @@ enum Calculator {
     }
 
     /// JavaScript `Math.round` (halves round up, also for negatives).
-    static func jsRound(_ value: Double) -> Int { Int((value + 0.5).rounded(.down)) }
+    static func jsRound(_ value: Double) -> Int { (value + 0.5).rounded(.down).safeInt }
 }
 
 extension Int {

@@ -73,12 +73,12 @@ struct LiveExercise: Codable, Hashable, Identifiable {
             plannedSets = 1
             restSeconds = 0
         } else {
-            plannedSets = max(1, Int(target?["targetSets"] ?? 3))
-            restSeconds = target?["restSeconds"].map { Int($0) } ?? defaultRest
+            plannedSets = Limits.plannedSets.clamp(target?["targetSets"] ?? 3).safeInt
+            restSeconds = target?["restSeconds"].map { Limits.restSeconds.clamp($0).safeInt } ?? defaultRest
         }
         var pending = WorkoutSet()
         if let target {
-            pending.reps = (target["targetRepsMax"] ?? target["targetRepsMin"]).map { Int($0) }
+            pending.reps = (target["targetRepsMax"] ?? target["targetRepsMin"]).map { Limits.reps.clamp($0).safeInt }
             pending.holdSeconds = target["targetHoldMax"] ?? target["targetHoldMin"]
             pending.weightKg = target["targetWeightKg"]
             pending.rpe = target["targetRpe"]
@@ -455,7 +455,7 @@ struct LiveSession: Codable, Hashable {
     /// Ends the running rest; the set it followed gets the actual rest time.
     mutating func closeRest(_ now: Double) {
         guard let r = rest else { return }
-        let taken = max(0, Int((r.durationSec - r.remaining(now)).rounded()))
+        let taken = max(0, (r.durationSec - r.remaining(now)).safeInt)
         rest = nil
         if let i = exercises.firstIndex(where: { $0.item.id == r.itemId }), exercises[i].item.sets.indices.contains(r.setIndex) {
             exercises[i].item.sets[r.setIndex].restSeconds = taken
@@ -523,7 +523,7 @@ struct LiveSession: Codable, Hashable {
     /// Stops the session clock and adds the elapsed seconds to the pending duration.
     mutating func pauseSessionClock(_ now: Double) {
         guard exercises.indices.contains(current), let timer = setTimer else { return }
-        let extra = Int(timer.elapsed(now).rounded())
+        let extra = timer.elapsed(now).safeSeconds
         exercises[current].pending.durationSeconds = (exercises[current].pending.durationSeconds ?? 0) + extra
         setTimer = nil
     }
@@ -540,7 +540,7 @@ struct LiveSession: Codable, Hashable {
         guard exercises.indices.contains(index) else { return }
         closeRest(now)
         var seconds = exercises[index].pending.durationSeconds ?? 0
-        if let timer = setTimer { seconds += Int(timer.elapsed(now).rounded()) }
+        if let timer = setTimer { seconds += timer.elapsed(now).safeSeconds }
         seconds = max(1, seconds)
         setTimer = nil
         var set = exercises[index].pending
@@ -593,7 +593,7 @@ struct LiveSession: Codable, Hashable {
     /// Stops the set timer and puts the time into the pending set.
     mutating func stopSetTimer(_ now: Double, field: TimerField) {
         guard let t = setTimer else { return }
-        let seconds = max(1, Int(t.elapsed(now).rounded()))
+        let seconds = max(1, t.elapsed(now).safeInt)
         setTimer = nil
         guard exercises.indices.contains(current) else { return }
         switch field {
@@ -616,7 +616,7 @@ struct LiveSession: Codable, Hashable {
         input.id = id
         input.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         input.planDayId = planDayId
-        input.durationMin = max(1, Int((elapsedMs(now) / 60000).rounded()))
+        input.durationMin = min(Int(Limits.sessionMinutes.max), max(1, (elapsedMs(now) / 60000).safeInt))
         input.rpe = rpe
         input.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         return input
@@ -633,7 +633,7 @@ enum Clock {
     /// "4:07", "1:05:03"; negative (over time) as "+0:12".
     static func text(_ seconds: Double) -> String {
         let over = seconds < 0
-        let total = Int(abs(over ? seconds.rounded(.down) : seconds.rounded(.up)))
+        let total = abs(over ? seconds.rounded(.down) : seconds.rounded(.up)).safeInt
         let body = DurationText.format(total)
         return over ? "+" + body : body
     }

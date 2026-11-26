@@ -752,16 +752,6 @@
         }
       }
     },
-    "Czas treningu może mieć najwyżej 1440 min.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A workout can last at most 1440 min."
-          }
-        }
-      }
-    },
     "Czas trwania": {
       "localizations": {
         "en": {
@@ -2801,16 +2791,6 @@
     "RIR": {
       "shouldTranslate": false
     },
-    "RIR musi być w zakresie 0–10.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RIR must be between 0 and 10."
-          }
-        }
-      }
-    },
     "RPE": {
       "shouldTranslate": false
     },
@@ -2820,16 +2800,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "RPE 0–10 (effort), RIR 0–10 (reps in reserve)."
-          }
-        }
-      }
-    },
-    "RPE musi być w zakresie 0–10.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RPE must be between 0 and 10."
           }
         }
       }
@@ -3724,12 +3694,12 @@
         }
       }
     },
-    "Wartość celu może wynosić najwyżej 20 000.": {
+    "Wartość musi być w zakresie %@.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A goal value can be at most 20,000."
+            "value": "The value must be in the range %@."
           }
         }
       }
@@ -3800,16 +3770,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Age and height must be numbers."
-          }
-        }
-      }
-    },
-    "Wiek musi być w zakresie 1–150.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Age must be between 1 and 150."
           }
         }
       }
@@ -4114,16 +4074,6 @@
         }
       }
     },
-    "Wzrost musi być w zakresie 50–300 cm.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Height must be between 50 and 300 cm."
-          }
-        }
-      }
-    },
     "Węglowodany": {
       "localizations": {
         "en": {
@@ -4390,6 +4340,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exercise datasets"
+          }
+        }
+      }
+    },
+    "Zmiana zawierała nieprawidłową liczbę i nie została zapisana.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change contained an invalid number and was not saved."
           }
         }
       }

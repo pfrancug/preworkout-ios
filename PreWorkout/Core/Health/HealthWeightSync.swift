@@ -280,7 +280,7 @@ final class HealthWeightSync {
     }
 
     func write(_ row: DiaryRow, person: String) async {
-        guard canShare, row.source == .app, let kg = row.appWeight ?? row.weight, kg > 0 else { return }
+        guard canShare, row.source == .app, let kg = (row.appWeight ?? row.weight).within(Limits.bodyWeightKg) else { return }
         let day = String(row.date.prefix(10))
         guard let sample = quantitySample(kg: kg, day: day, person: person) else { return }
         do {
@@ -338,7 +338,7 @@ final class HealthWeightSync {
         }
 
         var patches: [DiaryWeightPatch] = []
-        for (day, kg) in byDay where kg > 0 {
+        for (day, kg) in byDay where Limits.bodyWeightKg.contains(kg) {
             if let existing = rows.filter({ String($0.date.prefix(10)) == day && $0.hasAnyWeight })
                 .max(by: { $0.id < $1.id }) {
                 if let imported = existing.importedWeight, abs(imported - kg) < 0.05 {
@@ -422,7 +422,7 @@ final class HealthWeightSync {
         }
         var pending: [HKQuantitySample] = []
         for row in rows where row.source == .app {
-            guard let kg = row.appWeight ?? row.weight, kg > 0 else { continue }
+            guard let kg = (row.appWeight ?? row.weight).within(Limits.bodyWeightKg) else { continue }
             let day = String(row.date.prefix(10))
             let identifier = Self.syncIdentifier(person: person, day: day)
             if let already = known[identifier], abs(already.quantity.doubleValue(for: Self.kg) - kg) < 0.05 {

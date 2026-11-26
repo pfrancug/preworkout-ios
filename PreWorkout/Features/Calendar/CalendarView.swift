@@ -600,6 +600,7 @@ struct CalendarEntrySheet: View {
                         }
                         if categoryId.isEmpty {
                             TextField("Nazwa", text: $name)
+                                .maxLength($name, 120)
                         }
                         DatePicker("Data", selection: $date, displayedComponents: .date)
                     }
@@ -616,6 +617,7 @@ struct CalendarEntrySheet: View {
                 }
                 Section {
                     TextField("Notatka", text: $note, axis: .vertical)
+                        .maxLength($note, 1000)
                         .lineLimit(2...6)
                 }
             }
@@ -674,6 +676,7 @@ struct DayNoteSheet: View {
             Form {
                 Section {
                     TextField("Notatka dnia", text: $text, axis: .vertical)
+                        .maxLength($text, 2000)
                         .lineLimit(4...12)
                 } footer: {
                     Text("Pusta notatka usuwa notatkę tego dnia.")

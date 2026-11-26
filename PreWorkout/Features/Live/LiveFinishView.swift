@@ -92,6 +92,7 @@ struct LiveFinishView: View {
 
             Section {
                 TextField("Dodaj tytuł", text: binding(\.title, ""))
+                    .maxLength(binding(\.title, ""), 120)
                 Picker(selection: binding(\.rpe, nil)) {
                     Text(verbatim: "–").tag(Double?.none)
                     ForEach(Array(stride(from: 1.0, through: 10.0, by: 0.5)), id: \.self) { value in
@@ -101,6 +102,7 @@ struct LiveFinishView: View {
                     Text("Jak ciężko było?")
                 }
                 TextField("Notatki (opcjonalnie)", text: binding(\.notes, ""), axis: .vertical)
+                    .maxLength(binding(\.notes, ""), 4000)
                     .lineLimit(2...6)
             } footer: {
                 Text("RPE treningu: 1 bardzo lekko, 10 maksymalny wysiłek.")

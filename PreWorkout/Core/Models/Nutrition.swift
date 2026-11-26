@@ -9,6 +9,17 @@ struct NutritionGoal: Codable, Equatable {
     let fat: Double?
     let carbs: Double?
     let updatedAt: String?
+
+    private enum CodingKeys: String, CodingKey { case kcal, protein, fat, carbs, updatedAt }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kcal = c.lenientDouble(.kcal, Limits.goalKcal)
+        protein = c.lenientDouble(.protein, Limits.goalMacroGrams)
+        fat = c.lenientDouble(.fat, Limits.goalMacroGrams)
+        carbs = c.lenientDouble(.carbs, Limits.goalMacroGrams)
+        updatedAt = try? c.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
 }
 
 /// Body of `PUT /goals`; every key is required, nil is sent as `null` (= not set).
@@ -38,6 +49,17 @@ struct NutritionGoalVersion: Codable, Identifiable, Hashable {
     let protein: Double?
     let fat: Double?
     let carbs: Double?
+
+    private enum CodingKeys: String, CodingKey { case validFrom, kcal, protein, fat, carbs }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        validFrom = try c.decode(String.self, forKey: .validFrom)
+        kcal = c.lenientDouble(.kcal, Limits.goalKcal)
+        protein = c.lenientDouble(.protein, Limits.goalMacroGrams)
+        fat = c.lenientDouble(.fat, Limits.goalMacroGrams)
+        carbs = c.lenientDouble(.carbs, Limits.goalMacroGrams)
+    }
 
     var isRemoval: Bool { kcal == nil && protein == nil && fat == nil && carbs == nil }
 }
@@ -131,8 +153,8 @@ struct DiaryRow: Decodable, Identifiable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decodeIfPresent(Int.self, forKey: .id) ?? 0
         date = try c.decode(String.self, forKey: .date)
-        weight = try c.decodeIfPresent(Double.self, forKey: .weight)
-        source = try c.decodeIfPresent(DiaryWeightSource.self, forKey: .source) ?? .app
-        healthWeight = try c.decodeIfPresent(Double.self, forKey: .healthWeight)
+        weight = c.lenientDouble(.weight, Limits.bodyWeightKg)
+        source = (try? c.decodeIfPresent(DiaryWeightSource.self, forKey: .source)) ?? .app
+        healthWeight = c.lenientDouble(.healthWeight, Limits.bodyWeightKg)
     }
 }

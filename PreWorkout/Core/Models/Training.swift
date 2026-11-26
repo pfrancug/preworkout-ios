@@ -162,6 +162,21 @@ struct WorkoutSetStep: Codable, Hashable {
         return "–"
     }
 
+    init(exerciseId: String, reps: Int? = nil, holdSeconds: Double? = nil, durationSeconds: Int? = nil) {
+        self.exerciseId = exerciseId
+        self.reps = reps
+        self.holdSeconds = holdSeconds
+        self.durationSeconds = durationSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        exerciseId = try c.decode(String.self, forKey: .exerciseId)
+        reps = c.lenientInt(.reps, Limits.reps)
+        holdSeconds = c.lenientDouble(.holdSeconds, Limits.durationSeconds)
+        durationSeconds = c.lenientInt(.durationSeconds, Limits.durationSeconds)
+    }
+
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(exerciseId, forKey: .exerciseId)
@@ -200,18 +215,18 @@ struct WorkoutSet: Codable, Hashable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         isWarmup = try c.decodeIfPresent(Bool.self, forKey: .isWarmup) ?? false
-        reps = try c.decodeIfPresent(Int.self, forKey: .reps)
-        holdSeconds = try c.decodeIfPresent(Double.self, forKey: .holdSeconds)
-        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg)
-        distanceM = try c.decodeIfPresent(Double.self, forKey: .distanceM)
-        durationSeconds = try c.decodeIfPresent(Int.self, forKey: .durationSeconds)
+        reps = c.lenientInt(.reps, Limits.reps)
+        holdSeconds = c.lenientDouble(.holdSeconds, Limits.durationSeconds)
+        weightKg = c.lenientDouble(.weightKg, Limits.loadKg)
+        distanceM = c.lenientDouble(.distanceM, Limits.distanceM)
+        durationSeconds = c.lenientInt(.durationSeconds, Limits.durationSeconds)
         assistance = try c.decodeIfPresent(String.self, forKey: .assistance) ?? "none"
         assistanceNote = try c.decodeIfPresent(String.self, forKey: .assistanceNote) ?? ""
-        rpe = try c.decodeIfPresent(Double.self, forKey: .rpe)
-        rir = try c.decodeIfPresent(Int.self, forKey: .rir)
-        restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
+        rpe = c.lenientDouble(.rpe, Limits.rpe)
+        rir = c.lenientInt(.rir, Limits.rir)
+        restSeconds = c.lenientInt(.restSeconds, Limits.restSeconds)
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
-        attempts = try c.decodeIfPresent(Int.self, forKey: .attempts)
+        attempts = c.lenientInt(.attempts, Limits.attempts)
         steps = try c.decodeIfPresent([WorkoutSetStep].self, forKey: .steps) ?? []
     }
 

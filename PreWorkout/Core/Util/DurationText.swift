@@ -4,7 +4,7 @@ import Foundation
 /// Hours appear only from one hour up. Never raw seconds.
 enum DurationText {
     static func format(_ seconds: Double) -> String {
-        format(Int(max(0, seconds).rounded()))
+        format(max(0, seconds).safeInt)
     }
 
     static func format(_ seconds: Int) -> String {

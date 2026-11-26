@@ -326,7 +326,8 @@ struct WeightView: View {
     /// Fit the axis to the data (like Apple Health) instead of starting at zero.
     /// A single value still gets padding so the point is not glued to both edges.
     private func yDomain(for data: [WeightBucket]) -> ClosedRange<Double> {
-        guard let low = data.map(\.low).min(), let high = data.map(\.high).max() else { return 0...1 }
+        guard let low = data.map(\.low).min(), let high = data.map(\.high).max(),
+              low.isFinite, high.isFinite, low <= high else { return 0...1 }
         let pad = max((high - low) * 0.1, 1)
         return floor(low - pad)...ceil(high + pad)
     }
@@ -402,6 +403,10 @@ struct WeightView: View {
     }
 
     private func save(date: Date, weight: Double, id: Int?) async {
+        guard Limits.bodyWeightKg.contains(weight) else {
+            error = Limits.bodyWeightKg.message
+            return
+        }
         let day = DayString.string(from: date)
         let person = appState.activePersonId
         do {
@@ -633,7 +638,7 @@ private struct WeightEditorSheet: View {
         NavigationStack {
             Form {
                 DatePicker("Data", selection: $editor.date, in: ...Date(), displayedComponents: .date)
-                DecimalField("Waga", value: $editor.weight, unit: "kg")
+                DecimalField("Waga", value: $editor.weight, unit: "kg", limit: Limits.bodyWeightKg)
                 if let imported = editor.importedWeight {
                     LabeledContent("Health") {
                         Text(verbatim: "\(imported.short()) kg")
@@ -652,7 +657,7 @@ private struct WeightEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Zapisz") {
-                        guard let weight = editor.weight, weight > 0 else { return }
+                        guard let weight = editor.weight, Limits.bodyWeightKg.contains(weight) else { return }
                         saving = true
                         Task {
                             await onSave(editor.date, weight, editor.entryId)
@@ -660,7 +665,7 @@ private struct WeightEditorSheet: View {
                             dismiss()
                         }
                     }
-                    .disabled(editor.weight == nil || (editor.weight ?? 0) <= 0 || saving)
+                    .disabled(!Limits.bodyWeightKg.contains(editor.weight ?? 0) || saving)
                 }
             }
         }

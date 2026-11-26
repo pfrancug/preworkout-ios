@@ -70,12 +70,12 @@ struct UserSettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         lastName = try c.decodeIfPresent(String.self, forKey: .lastName) ?? ""
-        age = try c.decodeIfPresent(String.self, forKey: .age) ?? ""
-        height = try c.decodeIfPresent(String.self, forKey: .height) ?? ""
+        age = Limits.cleanAge(try c.decodeIfPresent(String.self, forKey: .age) ?? "")
+        height = Limits.cleanHeight(try c.decodeIfPresent(String.self, forKey: .height) ?? "")
         sex = try c.decodeIfPresent(String.self, forKey: .sex) ?? ""
         avatarUrl = try c.decodeIfPresent(String.self, forKey: .avatarUrl)
-        activity = try c.decodeIfPresent(Double.self, forKey: .activity)
-        weight = try c.decodeIfPresent(String.self, forKey: .weight) ?? ""
+        activity = c.lenientDouble(.activity, NumericLimit(min: 1, max: 2))
+        weight = Limits.cleanWeight(try c.decodeIfPresent(String.self, forKey: .weight) ?? "")
     }
 }
 
@@ -109,12 +109,12 @@ struct Person: Decodable, Identifiable, Hashable {
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         lastName = try c.decodeIfPresent(String.self, forKey: .lastName) ?? ""
-        age = try c.decodeIfPresent(String.self, forKey: .age) ?? ""
-        height = try c.decodeIfPresent(String.self, forKey: .height) ?? ""
+        age = Limits.cleanAge(try c.decodeIfPresent(String.self, forKey: .age) ?? "")
+        height = Limits.cleanHeight(try c.decodeIfPresent(String.self, forKey: .height) ?? "")
         sex = try c.decodeIfPresent(String.self, forKey: .sex) ?? ""
         avatarUrl = try c.decodeIfPresent(String.self, forKey: .avatarUrl)
-        activity = try c.decodeIfPresent(Double.self, forKey: .activity)
-        weight = try c.decodeIfPresent(String.self, forKey: .weight) ?? ""
+        activity = c.lenientDouble(.activity, NumericLimit(min: 1, max: 2))
+        weight = Limits.cleanWeight(try c.decodeIfPresent(String.self, forKey: .weight) ?? "")
     }
 }
 

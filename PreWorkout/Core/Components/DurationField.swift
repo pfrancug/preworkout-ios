@@ -6,7 +6,7 @@ struct DurationWheel: View {
     var maxHours = 10
 
     var body: some View {
-        let p = DurationText.parts(Int(seconds.rounded()))
+        let p = DurationText.parts(seconds.safeInt)
         HStack(spacing: 0) {
             wheel(0...maxHours, value: p.h, unit: Text("godz."), part: .hour)
             wheel(0...59, value: p.m, unit: Text("min"), part: .minute)
@@ -27,7 +27,7 @@ struct DurationWheel: View {
                 get: { value },
                 set: { newValue in
                     MainActor.assumeIsolated {
-                        let p = DurationText.parts(Int(seconds.rounded()))
+                        let p = DurationText.parts(seconds.safeInt)
                         switch part {
                         case .hour: set(h: newValue, m: p.m, s: p.s)
                         case .minute: set(h: p.h, m: newValue, s: p.s)
@@ -67,7 +67,7 @@ struct DurationField: View {
         self.title = title
         _seconds = Binding(
             get: { wholeSeconds.wrappedValue.map(Double.init) },
-            set: { wholeSeconds.wrappedValue = $0.map { Int($0.rounded()) } }
+            set: { wholeSeconds.wrappedValue = $0.map { Limits.durationSeconds.clamp($0).safeInt } }
         )
     }
 

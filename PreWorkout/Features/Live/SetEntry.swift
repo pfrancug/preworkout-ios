@@ -67,14 +67,14 @@ enum SetField: String, CaseIterable, Identifiable {
 
     func put(_ value: Double?, into set: inout WorkoutSet) {
         switch self {
-        case .reps: set.reps = value.map { Int($0) }
+        case .reps: set.reps = value.map { $0.safeInt }
         case .hold: set.holdSeconds = value
-        case .duration: set.durationSeconds = value.map { Int($0) }
+        case .duration: set.durationSeconds = value.map { $0.safeInt }
         // 0 kg = no extra load
         case .weight: set.weightKg = (value ?? 0) == 0 ? nil : value
         case .distance: set.distanceM = value
         case .rpe: set.rpe = value
-        case .rir: set.rir = value.map { Int($0) }
+        case .rir: set.rir = value.map { $0.safeInt }
         }
     }
 
@@ -128,9 +128,9 @@ extension SetField {
 
     func putStep(_ value: Double?, into step: inout WorkoutSetStep) {
         switch self {
-        case .reps: step.reps = value.map { Int($0) }
+        case .reps: step.reps = value.map { $0.safeInt }
         case .hold: step.holdSeconds = value
-        case .duration: step.durationSeconds = value.map { Int($0) }
+        case .duration: step.durationSeconds = value.map { $0.safeInt }
         default: break
         }
     }
@@ -320,7 +320,7 @@ struct NumberDial: View {
             text.gesture(
                 DragGesture(minimumDistance: 4)
                     .onChanged { g in
-                        let steps = Int(g.translation.width / 18)
+                        let steps = (g.translation.width / 18).safeInt
                         while dragSteps < steps { dragSteps += 1; step(true) }
                         while dragSteps > steps { dragSteps -= 1; step(false) }
                     }
@@ -444,6 +444,7 @@ struct LiveLogSheet: View {
                             .frame(height: 50)
                             .lvGlass(Capsule())
                         TextField("Notatka do serii", text: $set.notes, axis: .vertical)
+                            .maxLength($set.notes, 500)
                             .padding(14)
                             .lvGlass(RoundedRectangle(cornerRadius: 18))
                     }

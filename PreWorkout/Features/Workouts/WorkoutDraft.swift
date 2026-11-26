@@ -91,13 +91,20 @@ struct WorkoutDraft: Hashable {
 
     /// Localized validation error, nil when the API will accept it.
     var validationError: String? {
-        if let rpe, rpe > 10 { return String(localized: "RPE musi być w zakresie 0–10.") }
-        if let durationMin, durationMin > 1440 { return String(localized: "Czas treningu może mieć najwyżej 1440 min.") }
+        if let rpe, !Limits.rpe.contains(rpe) { return Limits.rpe.message }
+        if let durationMin, !Limits.sessionMinutes.contains(Double(durationMin)) { return Limits.sessionMinutes.message }
         for exercise in exercises {
             if exercise.sets.count > 50 { return String(localized: "Ćwiczenie może mieć najwyżej 50 serii.") }
             for set in exercise.sets.map(\.value) {
-                if let rpe = set.rpe, rpe > 10 { return String(localized: "RPE musi być w zakresie 0–10.") }
-                if let rir = set.rir, rir > 10 { return String(localized: "RIR musi być w zakresie 0–10.") }
+                if let rpe = set.rpe, !Limits.rpe.contains(rpe) { return Limits.rpe.message }
+                if let rir = set.rir, !Limits.rir.contains(Double(rir)) { return Limits.rir.message }
+                if let reps = set.reps, !Limits.reps.contains(Double(reps)) { return Limits.reps.message }
+                if let attempts = set.attempts, !Limits.attempts.contains(Double(attempts)) { return Limits.attempts.message }
+                if let weight = set.weightKg, !Limits.loadKg.contains(weight) { return Limits.loadKg.message }
+                if let distance = set.distanceM, !Limits.distanceM.contains(distance) { return Limits.distanceM.message }
+                if let hold = set.holdSeconds, !Limits.durationSeconds.contains(hold) { return Limits.durationSeconds.message }
+                if let duration = set.durationSeconds, !Limits.durationSeconds.contains(Double(duration)) { return Limits.durationSeconds.message }
+                if let rest = set.restSeconds, !Limits.restSeconds.contains(Double(rest)) { return Limits.restSeconds.message }
             }
         }
         return nil

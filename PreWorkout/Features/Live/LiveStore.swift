@@ -242,7 +242,7 @@ final class LiveStore {
         var restEnd: Date?
         var restPaused: Int?
         if let r = s.rest {
-            if let p = r.pausedRemaining { restPaused = max(0, Int(p.rounded())) }
+            if let p = r.pausedRemaining { restPaused = p.safeSeconds }
             else { restEnd = date(r.startedAt + r.durationSec * 1000) }
         }
         var exercise = String(localized: "Brak ćwiczeń")
@@ -255,7 +255,7 @@ final class LiveStore {
         }
         return .init(
             clockStart: date(s.startedAt + s.pausedMs),
-            pausedElapsed: s.isPaused ? Int(s.elapsedMs(now) / 1000) : nil,
+            pausedElapsed: s.isPaused ? (s.elapsedMs(now) / 1000).safeInt : nil,
             restEnd: restEnd,
             restPausedRemaining: restPaused,
             exercise: exercise,

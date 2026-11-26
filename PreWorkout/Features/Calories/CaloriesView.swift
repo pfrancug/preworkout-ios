@@ -26,8 +26,31 @@ struct CalculatorCache: Codable, Equatable {
     private static func key(_ person: String) -> String { "preworkout.calculator.\(person)" }
 
     static func load(_ person: String) -> CalculatorCache? {
-        guard let data = UserDefaults.standard.data(forKey: key(person)) else { return nil }
-        return try? JSONDecoder().decode(CalculatorCache.self, from: data)
+        guard let data = UserDefaults.standard.data(forKey: key(person)),
+              var cache = try? JSONDecoder().decode(CalculatorCache.self, from: data) else { return nil }
+        cache.sanitize()
+        return cache
+    }
+
+    /// Drops values outside the sane ranges (older builds could store absurd numbers).
+    mutating func sanitize() {
+        func keep(_ value: Int?, _ limit: NumericLimit) -> Int? {
+            guard let value, limit.contains(Double(value)) else { return nil }
+            return value
+        }
+        age = keep(age, Limits.ageYears)
+        serverAge = keep(serverAge, Limits.ageYears)
+        height = height.within(Limits.heightCm)
+        serverHeight = serverHeight.within(Limits.heightCm)
+        weight = weight.within(Limits.bodyWeightKg)
+        serverWeight = serverWeight.within(Limits.bodyWeightKg)
+        serverCalcWeight = serverCalcWeight.within(Limits.bodyWeightKg)
+        if let a = activity, !(a.isFinite && (1...2).contains(a)) { activity = nil }
+        if let a = serverActivity, !(a.isFinite && (1...2).contains(a)) { serverActivity = nil }
+        if let g = goal, [g.kcal, g.protein, g.fat, g.carbs].contains(where: { !($0 ?? 0).isFinite || ($0 ?? 0) > Limits.goalKcal.max || ($0 ?? 0) < 0 }) {
+            goal = nil
+            goalLoaded = false
+        }
     }
 
     func save(_ person: String) {
@@ -57,7 +80,8 @@ struct CalculatorView: View {
 
     private var result: Calculator.Result? {
         guard let male = data.male, let age = data.age, let height = data.height, let weight = data.weight,
-              let activity = data.activity, age > 0, height > 0, weight > 0 else { return nil }
+              let activity = data.activity, Limits.ageYears.contains(Double(age)),
+              Limits.heightCm.contains(height), Limits.bodyWeightKg.contains(weight) else { return nil }
         return Calculator.calculate(male: male, age: age, heightCm: height, weightKg: weight, activity: activity)
     }
 
@@ -67,9 +91,9 @@ struct CalculatorView: View {
     private var missingFields: [String] {
         var missing: [String] = []
         if data.male == nil { missing.append(String(localized: "płeć")) }
-        if (data.age ?? 0) <= 0 { missing.append(String(localized: "wiek")) }
-        if (data.height ?? 0) <= 0 { missing.append(String(localized: "wzrost")) }
-        if (data.weight ?? 0) <= 0 { missing.append(String(localized: "waga")) }
+        if !Limits.ageYears.contains(Double(data.age ?? 0)) { missing.append(String(localized: "wiek")) }
+        if !Limits.heightCm.contains(data.height ?? 0) { missing.append(String(localized: "wzrost")) }
+        if !Limits.bodyWeightKg.contains(data.weight ?? 0) { missing.append(String(localized: "waga")) }
         if data.activity == nil { missing.append(String(localized: "poziom aktywności")) }
         return missing
     }
@@ -136,9 +160,9 @@ struct CalculatorView: View {
             }
             .pickerStyle(.segmented)
             .listRowSeparator(.hidden)
-            IntField("Wiek", value: $data.age, unit: String(localized: "lat"))
-            DecimalField("Wzrost", value: $data.height, unit: "cm")
-            DecimalField("Waga", value: $data.weight, unit: "kg")
+            IntField("Wiek", value: $data.age, unit: String(localized: "lat"), limit: Limits.ageYears)
+            DecimalField("Wzrost", value: $data.height, unit: "cm", limit: Limits.heightCm)
+            DecimalField("Waga", value: $data.weight, unit: "kg", limit: Limits.bodyWeightKg)
             Picker("Poziom aktywności", selection: $data.activity) {
                 Text("Wybierz").tag(Double?.none)
                 ForEach(Calculator.activities) { option in
@@ -311,10 +335,10 @@ struct CalculatorView: View {
                     }
                     .accessibilityHint(Text(DayString.label(String(updated.prefix(10)))))
                 }
-                DecimalField("Kalorie", value: $goal.kcal, unit: "kcal")
-                DecimalField("Białko", value: $goal.protein, unit: "g")
-                DecimalField("Tłuszcz", value: $goal.fat, unit: "g")
-                DecimalField("Węglowodany", value: $goal.carbs, unit: "g")
+                DecimalField("Kalorie", value: $goal.kcal, unit: "kcal", limit: Limits.goalKcal)
+                DecimalField("Białko", value: $goal.protein, unit: "g", limit: Limits.goalMacroGrams)
+                DecimalField("Tłuszcz", value: $goal.fat, unit: "g", limit: Limits.goalMacroGrams)
+                DecimalField("Węglowodany", value: $goal.carbs, unit: "g", limit: Limits.goalMacroGrams)
                 Button {
                     Task { await save(clear: false) }
                 } label: {
@@ -426,11 +450,11 @@ struct CalculatorView: View {
                 data.serverSex = settings.sex
                 data.male = settings.sex == "male"
             }
-            if let age = Int(settings.age), age > 0, age != data.serverAge {
+            if let age = Int(settings.age), Limits.ageYears.contains(Double(age)), age != data.serverAge {
                 data.serverAge = age
                 data.age = age
             }
-            if let height = Double(settings.height), height > 0, height != data.serverHeight {
+            if let height = Double(settings.height).within(Limits.heightCm), height != data.serverHeight {
                 data.serverHeight = height
                 data.height = height
             }
@@ -438,7 +462,7 @@ struct CalculatorView: View {
                 data.serverActivity = activity
                 data.activity = activity
             }
-            if let kg = Self.parseWeight(settings.weight), kg > 0, kg != data.serverCalcWeight {
+            if let kg = Self.parseWeight(settings.weight), kg != data.serverCalcWeight {
                 data.serverCalcWeight = kg
                 data.weight = kg
             }
@@ -462,12 +486,12 @@ struct CalculatorView: View {
 
     private static func parseWeight(_ raw: String) -> Double? {
         let text = raw.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
-        guard let value = Double(text), value > 0 else { return nil }
+        guard let value = Double(text).within(Limits.bodyWeightKg) else { return nil }
         return value
     }
 
     private static func weightText(_ value: Double) -> String {
-        value == value.rounded() ? String(Int(value.rounded())) : String(format: "%.2f", value)
+        value == value.rounded() ? String(value.safeInt) : String(format: "%.2f", value)
     }
 
     private func queuePersist() {
@@ -488,18 +512,18 @@ struct CalculatorView: View {
             ?? DiskCache.read("settings", person: person)
             ?? UserSettings(name: "", age: "", height: "", sex: "")
         if let male = data.male { settings.sex = male ? "male" : "female" }
-        if let age = data.age, age > 0 { settings.age = String(age) }
-        if let height = data.height, height > 0 {
-            settings.height = height == height.rounded() ? String(Int(height.rounded())) : String(height)
+        if let age = data.age, Limits.ageYears.contains(Double(age)) { settings.age = String(age) }
+        if let height = data.height, Limits.heightCm.contains(height) {
+            settings.height = height == height.rounded() ? String(height.safeInt) : String(format: "%.2f", height)
         }
-        if let weight = data.weight, weight > 0 { settings.weight = Self.weightText(weight) }
+        if let weight = data.weight, Limits.bodyWeightKg.contains(weight) { settings.weight = Self.weightText(weight) }
         settings.activity = data.activity
         do {
             try await APIClient.shared.saveSettings(settings, person: person)
             profile = settings
             data.serverSex = settings.sex
-            if let age = Int(settings.age) { data.serverAge = age }
-            if let height = Double(settings.height) { data.serverHeight = height }
+            if let age = Int(settings.age), Limits.ageYears.contains(Double(age)) { data.serverAge = age }
+            if let height = Double(settings.height).within(Limits.heightCm) { data.serverHeight = height }
             data.serverActivity = settings.activity
             data.serverCalcWeight = Self.parseWeight(settings.weight)
         } catch {
@@ -521,13 +545,17 @@ struct CalculatorView: View {
             body = NutritionGoalInput()
         } else {
             func clean(_ value: Double?) -> Double? {
-                guard let value, value > 0 else { return nil }
+                guard let value, value.isFinite, value > 0 else { return nil }
                 return Double(Calculator.jsRound(value))
             }
             body = NutritionGoalInput(kcal: clean(goal.kcal), protein: clean(goal.protein),
                                       fat: clean(goal.fat), carbs: clean(goal.carbs))
-            if [body.kcal, body.protein, body.fat, body.carbs].contains(where: { ($0 ?? 0) > 20_000 }) {
-                error = String(localized: "Wartość celu może wynosić najwyżej 20 000.")
+            if !Limits.goalKcal.contains(body.kcal ?? 0) {
+                error = Limits.goalKcal.message
+                return
+            }
+            if [body.protein, body.fat, body.carbs].contains(where: { !Limits.goalMacroGrams.contains($0 ?? 0) }) {
+                error = Limits.goalMacroGrams.message
                 return
             }
         }

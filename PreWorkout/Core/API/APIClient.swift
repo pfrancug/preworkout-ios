@@ -149,6 +149,9 @@ final class APIClient: @unchecked Sendable {
         key: String,
         person: String
     ) async throws -> Data? {
+        guard OutboxRules.isSane(body) else {
+            throw APIError.http(status: 400, message: OutboxRules.rejectedNumberMessage)
+        }
         if await Outbox.shared.hasPending(kind: kind, person: person, key: key) {
             await Outbox.shared.enqueue(kind: kind, person: person, key: key, method: method, path: path, body: body)
             await Outbox.shared.flush()

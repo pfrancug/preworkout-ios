@@ -48,6 +48,10 @@ struct EditProfileView: View {
                         TextField("–", text: $form.age)
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
+                            .onChange(of: form.age) { _, value in
+                                let digits = String(value.filter { $0.isASCII && $0.isNumber }.prefix(3))
+                                if digits != value { form.age = digits }
+                            }
                         Text("lat").foregroundStyle(.secondary)
                     }
                 }
@@ -56,6 +60,10 @@ struct EditProfileView: View {
                         TextField("–", text: $form.height)
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
+                            .onChange(of: form.height) { _, value in
+                                let digits = String(value.filter { $0.isASCII && $0.isNumber }.prefix(3))
+                                if digits != value { form.height = digits }
+                            }
                         Text(verbatim: "cm").foregroundStyle(.secondary)
                     }
                 }
@@ -133,12 +141,12 @@ struct EditProfileView: View {
     private func validated() -> UserSettings? {
         let age = form.age.trimmingCharacters(in: .whitespaces)
         let height = form.height.trimmingCharacters(in: .whitespaces)
-        if let value = Int(age), !(1...150).contains(value) {
-            error = String(localized: "Wiek musi być w zakresie 1–150.")
+        if let value = Int(age), !Limits.ageYears.contains(Double(value)) {
+            error = Limits.ageYears.message
             return nil
         }
-        if let value = Int(height), !(50...300).contains(value) {
-            error = String(localized: "Wzrost musi być w zakresie 50–300 cm.")
+        if let value = Int(height), !Limits.heightCm.contains(Double(value)) {
+            error = Limits.heightCm.message
             return nil
         }
         if (!age.isEmpty && Int(age) == nil) || (!height.isEmpty && Int(height) == nil) {
@@ -146,8 +154,8 @@ struct EditProfileView: View {
             return nil
         }
         var body = form
-        body.name = form.name.trimmingCharacters(in: .whitespaces)
-        body.lastName = form.lastName.trimmingCharacters(in: .whitespaces)
+        body.name = form.name.trimmingCharacters(in: .whitespaces).capped(Limits.titleLength)
+        body.lastName = form.lastName.trimmingCharacters(in: .whitespaces).capped(Limits.titleLength)
         body.age = age
         body.height = height
         return body

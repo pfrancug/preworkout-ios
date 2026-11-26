@@ -37,6 +37,44 @@ enum OutboxRules {
         case drop(String)
     }
 
+    /// Numbers a queued body may hold, by JSON key. Anything else must still be finite and below 1e13.
+    private static let numberLimits: [String: NumericLimit] = [
+        "weight": Limits.bodyWeightKg, "healthWeight": Limits.bodyWeightKg,
+        "weightKg": Limits.loadKg, "reps": Limits.reps, "distanceM": Limits.distanceM,
+        "rpe": Limits.rpe, "rir": Limits.rir, "attempts": Limits.attempts,
+        "durationMin": Limits.sessionMinutes, "durationSeconds": Limits.durationSeconds,
+        "holdSeconds": Limits.durationSeconds, "restSeconds": Limits.restSeconds,
+        "kcal": Limits.goalKcal, "protein": Limits.goalMacroGrams, "fat": Limits.goalMacroGrams,
+        "carbs": Limits.goalMacroGrams,
+    ]
+
+    /// False when a queued write carries an absurd or non-finite number (such a
+    /// write can never succeed and must not be replayed on every launch).
+    static func isSane(_ body: Data?) -> Bool {
+        guard let body else { return true }
+        guard let object = try? JSONSerialization.jsonObject(with: body) else { return false }
+        return isSane(object, key: nil)
+    }
+
+    private static func isSane(_ value: Any, key: String?) -> Bool {
+        if let dictionary = value as? [String: Any] {
+            return dictionary.allSatisfy { isSane($0.value, key: $0.key) }
+        }
+        if let array = value as? [Any] {
+            return array.allSatisfy { isSane($0, key: key) }
+        }
+        if let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() {
+            let x = number.doubleValue
+            guard x.isFinite, abs(x) < 1e13 else { return false }
+            if let key, let limit = numberLimits[key], x != 0 { return limit.contains(x) }
+        }
+        return true
+    }
+
+    static var rejectedNumberMessage: String {
+        String(localized: "Zmiana zawierała nieprawidłową liczbę i nie została zapisana.")
+    }
+
     static func isNetworkError(_ error: Error) -> Bool {
         if error is URLError { return true }
         return (error as NSError).domain == NSURLErrorDomain
@@ -148,7 +186,16 @@ final class Outbox {
         let current = DiskCache.currentUserId()
         guard current != userId else { return }
         userId = current
-        items = current.map { OutboxStore.load(userId: $0) } ?? []
+        var loaded = current.map { OutboxStore.load(userId: $0) } ?? []
+        // A queued write with an absurd number would be replayed (and fail) on every launch.
+        let bad = loaded.filter { !OutboxRules.isSane($0.body) }
+        if !bad.isEmpty, let current {
+            loaded.removeAll { item in bad.contains { $0.id == item.id } }
+            OutboxStore.save(loaded, userId: current)
+            forgetOptimistic(bad, userId: current)
+            rejectedMessage = OutboxRules.rejectedNumberMessage
+        }
+        items = loaded
     }
 
     func hasPending(kind: OutboxKind, person: String, key: String) -> Bool {
@@ -159,6 +206,10 @@ final class Outbox {
     func enqueue(kind: OutboxKind, person: String, key: String, method: String, path: String, body: Data?) {
         attach()
         guard let userId else { return }
+        guard OutboxRules.isSane(body) else {
+            rejectedMessage = OutboxRules.rejectedNumberMessage
+            return
+        }
         if let index = items.firstIndex(where: {
             $0.kind == kind && $0.personId == person && $0.key == key && $0.id != inFlight
         }) {
@@ -217,11 +268,15 @@ final class Outbox {
             guard let current = items.first(where: { $0.id == item.id }) else { continue }
             inFlight = current.id
             let outcome: OutboxRules.Outcome
-            do {
-                try await APIClient.shared.replay(current.method, current.path, body: current.body)
-                outcome = .delivered
-            } catch {
-                outcome = OutboxRules.classify(error, method: current.method)
+            if !OutboxRules.isSane(current.body) {
+                outcome = .drop(OutboxRules.rejectedNumberMessage)
+            } else {
+                do {
+                    try await APIClient.shared.replay(current.method, current.path, body: current.body)
+                    outcome = .delivered
+                } catch {
+                    outcome = OutboxRules.classify(error, method: current.method)
+                }
             }
             inFlight = nil
 
