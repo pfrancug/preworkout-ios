@@ -3,8 +3,8 @@ import Foundation
 
 /// Live Activity of a running workout (Lock Screen + Dynamic Island).
 /// Shared by the app and the PreWorkoutLiveActivity widget extension.
-struct WorkoutActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
+struct WorkoutActivityAttributes: ActivityAttributes, Sendable {
+    struct ContentState: Codable, Hashable, Sendable {
         /// Workout start shifted by the paused time: `Text(timerInterval:)` counts from here.
         var clockStart: Date
         /// Elapsed seconds while paused (the clock is frozen); nil = running.

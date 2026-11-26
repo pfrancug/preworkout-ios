@@ -252,16 +252,21 @@ final class LiveStore {
     private func updateActivity() {
         guard let s = session else {
             lastContent = nil
-            let all = Activity<WorkoutActivityAttributes>.activities
             activity = nil
-            Task { for a in all { await a.end(nil, dismissalPolicy: .immediate) } }
+            Task { @MainActor in
+                for a in Activity<WorkoutActivityAttributes>.activities {
+                    await a.end(nil, dismissalPolicy: .immediate)
+                }
+            }
             return
         }
         let state = content(s)
         guard state != lastContent else { return }
         lastContent = state
-        if let activity, activity.activityState == .active || activity.activityState == .stale {
-            Task { await activity.update(ActivityContent(state: state, staleDate: nil)) }
+        if let current = activity, current.activityState == .active || current.activityState == .stale {
+            Task { @MainActor in
+                await self.activity?.update(ActivityContent(state: state, staleDate: nil))
+            }
             return
         }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }

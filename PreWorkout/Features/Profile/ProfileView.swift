@@ -97,6 +97,7 @@ struct ProfileView: View {
     // MARK: Sections
 
     private func headerSection(_ original: UserSettings) -> some View {
+        let hasPhoto = hasAvatar(original)
         Section {
             HStack(spacing: 16) {
                 ZStack {
@@ -117,10 +118,10 @@ struct ProfileView: View {
                     }
                     HStack(spacing: 12) {
                         PhotosPicker(selection: $photo, matching: .images) {
-                            (hasAvatar(original) ? Text("Zmień zdjęcie") : Text("Dodaj zdjęcie"))
+                            (hasPhoto ? Text("Zmień zdjęcie") : Text("Dodaj zdjęcie"))
                                 .font(.subheadline)
                         }
-                        if hasAvatar(original) {
+                        if hasPhoto {
                             Button("Usuń", role: .destructive) { Task { await removePhoto() } }
                                 .font(.subheadline)
                         }

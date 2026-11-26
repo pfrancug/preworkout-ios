@@ -1019,7 +1019,10 @@ struct LiveWorkoutView: View {
     private func afterSheet(_ action: @escaping () -> Void) {
         if sheet == nil { action(); return }
         sheet = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: action)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            action()
+        }
     }
 
     private func add(_ exercise: Exercise, mode: AddMode, asSession: Bool = false) {

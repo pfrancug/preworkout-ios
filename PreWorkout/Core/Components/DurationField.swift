@@ -8,20 +8,34 @@ struct DurationWheel: View {
     var body: some View {
         let p = DurationText.parts(Int(seconds.rounded()))
         HStack(spacing: 0) {
-            wheel(0...maxHours, value: p.h, unit: Text("godz.")) { set(h: $0, m: p.m, s: p.s) }
-            wheel(0...59, value: p.m, unit: Text("min")) { set(h: p.h, m: $0, s: p.s) }
-            wheel(0...59, value: p.s, unit: Text("sek.")) { set(h: p.h, m: p.m, s: $0) }
+            wheel(0...maxHours, value: p.h, unit: Text("godz."), part: .hour)
+            wheel(0...59, value: p.m, unit: Text("min"), part: .minute)
+            wheel(0...59, value: p.s, unit: Text("sek."), part: .second)
         }
         .frame(height: 150)
     }
+
+    private enum Part { case hour, minute, second }
 
     private func set(h: Int, m: Int, s: Int) {
         seconds = Double(h * 3600 + m * 60 + s)
     }
 
-    private func wheel(_ range: ClosedRange<Int>, value: Int, unit: Text, set: @escaping (Int) -> Void) -> some View {
+    private func wheel(_ range: ClosedRange<Int>, value: Int, unit: Text, part: Part) -> some View {
         HStack(spacing: 2) {
-            Picker(selection: Binding(get: { value }, set: set)) {
+            Picker(selection: Binding(
+                get: { value },
+                set: { newValue in
+                    MainActor.assumeIsolated {
+                        let p = DurationText.parts(Int(seconds.rounded()))
+                        switch part {
+                        case .hour: set(h: newValue, m: p.m, s: p.s)
+                        case .minute: set(h: p.h, m: newValue, s: p.s)
+                        case .second: set(h: p.h, m: p.m, s: newValue)
+                        }
+                    }
+                }
+            )) {
                 ForEach(range, id: \.self) { n in
                     Text(verbatim: "\(n)").monospacedDigit().tag(n)
                 }

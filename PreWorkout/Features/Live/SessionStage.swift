@@ -69,7 +69,12 @@ struct SessionStage: View {
                 .accessibilityLabel(Text("Dodaj próbę"))
             }
             .padding(.top, 22)
-            TextField("Notatka (opcjonalnie)", text: Binding(get: { note }, set: onNote), axis: .vertical)
+            TextField("Notatka (opcjonalnie)", text: Binding(
+                get: { note },
+                set: { newValue in
+                    MainActor.assumeIsolated { onNote(newValue) }
+                }
+            ), axis: .vertical)
                 .lineLimit(1...3)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
