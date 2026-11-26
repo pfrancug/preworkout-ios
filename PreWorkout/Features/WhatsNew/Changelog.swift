@@ -56,6 +56,8 @@ enum Changelog {
                    "The workout clock stays on one line past one hour, also in the Dynamic Island"),
             .small("bolt.horizontal", "Aplikacja otwiera się od razu z danymi na telefonie i odświeża je w tle tylko, gdy coś się zmieniło",
                    "The app opens instantly from data on the phone and refreshes in the background only when something has changed"),
+            .small("person.text.rectangle", "Opcjonalne nazwisko w profilu, a poziom aktywności i dane z kalkulatora zapisują się na koncie",
+                   "Optional last name in your profile, and the activity level and calculator data are saved to your account"),
             .small("sparkles", "Nowy ekran „Co nowego” w Profilu",
                    "New What's new screen in Profile"),
         ]),

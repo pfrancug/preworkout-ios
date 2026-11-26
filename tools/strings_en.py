@@ -393,6 +393,7 @@ EN = {
     "Zakończ sesję": "Finish session",
     "Dodaj próbę": "Add attempt",
     "Notatka (opcjonalnie)": "Note (optional)",
+    "Nazwisko": "Last name",
     "1 próba": "1 attempt",
     "%lld próby": "%lld attempts",
     "%lld prób": "%lld attempts",

@@ -127,6 +127,8 @@ struct ProfileView: View {
         Section {
             TextField("Imię", text: $form.name)
                 .textContentType(.givenName)
+            TextField("Nazwisko", text: $form.lastName)
+                .textContentType(.familyName)
             Picker("Płeć", selection: $form.sex) {
                 ForEach(["", "male", "female"], id: \.self) { Text(Labels.sex($0)).tag($0) }
             }
@@ -202,7 +204,7 @@ struct ProfileView: View {
     // MARK: Helpers
 
     private func displayName(_ settings: UserSettings) -> String {
-        let name = settings.name.trimmingCharacters(in: .whitespaces)
+        let name = settings.displayName
         if !name.isEmpty { return name }
         return appState.activePerson?.displayName ?? String(localized: "Ja")
     }
@@ -218,8 +220,8 @@ struct ProfileView: View {
     private func hasAvatar(_ s: UserSettings) -> Bool { !(s.avatarUrl ?? "").isEmpty }
 
     private func hasChanges(_ original: UserSettings) -> Bool {
-        form.name != original.name || form.age != original.age
-            || form.height != original.height || form.sex != original.sex
+        form.name != original.name || form.lastName != original.lastName
+            || form.age != original.age || form.height != original.height || form.sex != original.sex
     }
 
     private var bmi: Double? {
@@ -271,6 +273,7 @@ struct ProfileView: View {
         }
         var body = form
         body.name = form.name.trimmingCharacters(in: .whitespaces)
+        body.lastName = form.lastName.trimmingCharacters(in: .whitespaces)
         body.age = age
         body.height = height
         return body

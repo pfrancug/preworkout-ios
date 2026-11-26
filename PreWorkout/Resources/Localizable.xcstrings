@@ -1682,6 +1682,16 @@
         }
       }
     },
+    "Nazwisko": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last name"
+          }
+        }
+      }
+    },
     "Nie masz aktywnego planu. Dotknij planu, aby ustawić go jako cel dzienny.": {
       "localizations": {
         "en": {

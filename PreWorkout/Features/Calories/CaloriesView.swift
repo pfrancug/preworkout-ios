@@ -26,6 +26,8 @@ struct CalculatorCache: Codable, Equatable {
     var serverHeight: Double?
     var serverWeight: Double?
     var serverWeightDate: String?
+    var serverActivity: Double?
+    var serverCalcWeight: Double?
     var goal: NutritionGoal?
     var goalLoaded = false
     var history: [NutritionGoalVersion] = []
@@ -47,6 +49,9 @@ struct CalculatorView: View {
 
     @State private var data = CalculatorCache()
     @State private var restored = false
+    @State private var profile: UserSettings?
+    @State private var persistTask: Task<Void, Never>?
+    @State private var applyingServer = false
 
     // Saved goal
     @State private var goalState: LoadState<NutritionGoal?> = .idle
@@ -123,7 +128,10 @@ struct CalculatorView: View {
             Text("Cel dzienny zostanie usunięty. Zmiana trafi do historii celu.")
         }
         .onAppear(perform: restore)
-        .onChange(of: data) { _, value in value.save(appState.activePersonId) }
+        .onChange(of: data) { _, value in
+            value.save(appState.activePersonId)
+            queuePersist()
+        }
         .task { await refresh() }
     }
 
@@ -419,7 +427,10 @@ struct CalculatorView: View {
         if let history = try? await historyTask {
             data.history = history.sorted { $0.validFrom > $1.validFrom }
         }
+        applyingServer = true
+        defer { applyingServer = false }
         if let settings = try? await settingsTask {
+            profile = settings
             if !settings.sex.isEmpty, settings.sex != data.serverSex {
                 data.serverSex = settings.sex
                 data.male = settings.sex == "male"
@@ -432,12 +443,76 @@ struct CalculatorView: View {
                 data.serverHeight = height
                 data.height = height
             }
+            if let activity = settings.activity, activity != data.serverActivity {
+                data.serverActivity = activity
+                data.activity = activity
+            }
+            if let kg = Self.parseWeight(settings.weight), kg > 0, kg != data.serverCalcWeight {
+                data.serverCalcWeight = kg
+                data.weight = kg
+            }
         }
-        if let latest = try? await weightTask, latest.kg != data.serverWeight || latest.date != data.serverWeightDate {
+        // Diary weight fills the field only when the profile has no calculator weight yet.
+        if data.serverCalcWeight == nil, let latest = try? await weightTask,
+           latest.kg != data.serverWeight || latest.date != data.serverWeightDate {
             data.serverWeight = latest.kg
             data.serverWeightDate = latest.date
             data.weight = latest.kg
             data.weightDate = latest.date
+        }
+        // First sync: upload activity or weight that lived only on the phone.
+        let settings = profile
+        if (settings?.activity == nil && data.activity != nil)
+            || (Self.parseWeight(settings?.weight ?? "") == nil && data.weight != nil) {
+            applyingServer = false
+            await persistCalculatorFields()
+        }
+    }
+
+    private static func parseWeight(_ raw: String) -> Double? {
+        let text = raw.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(text), value > 0 else { return nil }
+        return value
+    }
+
+    private static func weightText(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value.rounded())) : String(format: "%.2f", value)
+    }
+
+    private func queuePersist() {
+        guard !applyingServer else { return }
+        persistTask?.cancel()
+        persistTask = Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            await persistCalculatorFields()
+        }
+    }
+
+    /// Writes calculator inputs into the profile so they follow the account.
+    private func persistCalculatorFields() async {
+        let person = appState.activePersonId
+        guard !person.isEmpty else { return }
+        var settings = profile
+            ?? DiskCache.read("settings", person: person)
+            ?? UserSettings(name: "", age: "", height: "", sex: "")
+        if let male = data.male { settings.sex = male ? "male" : "female" }
+        if let age = data.age, age > 0 { settings.age = String(age) }
+        if let height = data.height, height > 0 {
+            settings.height = height == height.rounded() ? String(Int(height.rounded())) : String(height)
+        }
+        if let weight = data.weight, weight > 0 { settings.weight = Self.weightText(weight) }
+        settings.activity = data.activity
+        do {
+            try await APIClient.shared.saveSettings(settings, person: person)
+            profile = settings
+            data.serverSex = settings.sex
+            if let age = Int(settings.age) { data.serverAge = age }
+            if let height = Double(settings.height) { data.serverHeight = height }
+            data.serverActivity = settings.activity
+            data.serverCalcWeight = Self.parseWeight(settings.weight)
+        } catch {
+            if self.error == nil { self.error = error.localizedDescription }
         }
     }
 
