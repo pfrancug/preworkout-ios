@@ -475,14 +475,16 @@ final class HealthWeightSync {
 
     private func startBackgroundTask() -> UIBackgroundTaskIdentifier {
         expireFlag = false
-        var id = UIBackgroundTaskIdentifier.invalid
-        id = UIApplication.shared.beginBackgroundTask(withName: "HealthWeightSync") { [weak self] in
-            self?.expireFlag = true
-            self?.inFlight?.cancel()
-            self?.endBackgroundTaskIfNeeded(id)
+        if backgroundTask != .invalid {
+            endBackgroundTaskIfNeeded(backgroundTask)
         }
-        backgroundTask = id
-        return id
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "HealthWeightSync") { [weak self] in
+            guard let self else { return }
+            self.expireFlag = true
+            self.inFlight?.cancel()
+            self.endBackgroundTaskIfNeeded(self.backgroundTask)
+        }
+        return backgroundTask
     }
 
     private func endBackgroundTaskIfNeeded(_ id: UIBackgroundTaskIdentifier) {
