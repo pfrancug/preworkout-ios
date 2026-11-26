@@ -282,6 +282,26 @@
         }
       }
     },
+    "30 dni": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
+          }
+        }
+      }
+    },
+    "90 dni": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 days"
+          }
+        }
+      }
+    },
     "Aktywny": {
       "localizations": {
         "en": {
@@ -468,6 +488,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "No goal"
+          }
+        }
+      }
+    },
+    "Brak pomiarów wagi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No weight entries yet"
           }
         }
       }
@@ -812,6 +842,16 @@
         }
       }
     },
+    "Dodaj": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
     "Dodaj alias": {
       "localizations": {
         "en": {
@@ -868,6 +908,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add a title"
+          }
+        }
+      }
+    },
+    "Dodaj wagę": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add weight"
+          }
+        }
+      }
+    },
+    "Dodaj wagę albo połącz aplikację z Health, żeby zaimportować wcześniejsze pomiary.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a weight or connect Health to import earlier measurements."
           }
         }
       }
@@ -1078,6 +1138,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit workout"
+          }
+        }
+      }
+    },
+    "Edytuj wagę": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit weight"
           }
         }
       }
@@ -2165,12 +2235,32 @@
         }
       }
     },
+    "Polityka prywatności": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
     "Pomiar": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Measurement"
+          }
+        }
+      }
+    },
+    "Pomiary": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entries"
           }
         }
       }
@@ -2331,6 +2421,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activity level"
+          }
+        }
+      }
+    },
+    "Połącz z Apple Health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to Apple Health"
           }
         }
       }
@@ -2574,6 +2674,16 @@
         }
       }
     },
+    "Rok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Year"
+          }
+        }
+      }
+    },
     "Rozdziel combo": {
       "localizations": {
         "en": {
@@ -2800,6 +2910,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Superset with the current one"
+          }
+        }
+      }
+    },
+    "Synchronizuj z Health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync with Health"
           }
         }
       }
@@ -3124,6 +3244,16 @@
         }
       }
     },
+    "Usunąć ten pomiar?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this entry?"
+          }
+        }
+      }
+    },
     "Usunąć ten trening?": {
       "localizations": {
         "en": {
@@ -3274,6 +3404,16 @@
         }
       }
     },
+    "Waga jest synchronizowana z aplikacją Health w obie strony. Dane z Health nie są nikomu udostępniane i nie służą do reklam.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight stays in sync with the Health app both ways. Health data is not shared with anyone and is not used for ads."
+          }
+        }
+      }
+    },
     "Waga z dziennika: %@.": {
       "localizations": {
         "en": {
@@ -3414,6 +3554,16 @@
         }
       }
     },
+    "Wsparcie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support"
+          }
+        }
+      }
+    },
     "Wszystkie Twoje dane zostaną trwale usunięte. Tej operacji nie można cofnąć.": {
       "localizations": {
         "en": {
@@ -3460,6 +3610,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "All sets logged in this session will be lost. This can't be undone."
+          }
+        }
+      }
+    },
+    "Wszystko": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
           }
         }
       }
@@ -3684,6 +3844,16 @@
         }
       }
     },
+    "Za mało pomiarów do wykresu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough entries for a chart"
+          }
+        }
+      }
+    },
     "Zaawansowany": {
       "localizations": {
         "en": {
@@ -3740,6 +3910,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finish workout"
+          }
+        }
+      }
+    },
+    "Zakres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range"
           }
         }
       }

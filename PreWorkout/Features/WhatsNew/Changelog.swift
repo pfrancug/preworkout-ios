@@ -62,6 +62,8 @@ enum Changelog {
                    "A clearer sign-in screen that shows what the app is for"),
             .small("calendar", "Kalendarz z zaznaczonymi dniami treningów",
                    "A calendar that marks the days you trained"),
+            .small("chart.line.uptrend.xyaxis", "Wykres wagi i synchronizacja z aplikacją Health",
+                   "A weight chart and two-way sync with the Health app"),
             .small("sparkles", "Nowy ekran „Co nowego” w Profilu",
                    "New What's new screen in Profile"),
         ]),

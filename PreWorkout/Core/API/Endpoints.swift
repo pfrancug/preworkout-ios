@@ -84,13 +84,37 @@ extension APIClient {
         return saved
     }
 
+    func diary(person id: String) async throws -> [DiaryRow] {
+        try await get(personPath(id) + "/diary", cache: cacheKey("diary", person: id))
+    }
+
     /// Latest logged body weight (kg) and its date, from the diary.
     func latestWeight(person id: String) async throws -> (date: String, kg: Double)? {
-        let rows: [DiaryRow] = try await get(personPath(id) + "/diary", cache: cacheKey("diary", person: id))
+        let rows = try await diary(person: id)
         return rows
             .filter { ($0.weight ?? 0) > 0 }
             .max { $0.date < $1.date }
             .map { (String($0.date.prefix(10)), $0.weight ?? 0) }
+    }
+
+    func upsertDiaryWeight(date: String, weight: Double, id: Int? = nil, person: String) async throws -> DiaryRow {
+        struct Body: Encodable {
+            var id: Int?
+            var date: String
+            var weight: Double
+        }
+        let row: DiaryRow = try await send(
+            "PUT",
+            personPath(person) + "/diary/entries",
+            body: Body(id: (id ?? 0) > 0 ? id : nil, date: date, weight: weight)
+        )
+        invalidate(["diary"], person: person)
+        return row
+    }
+
+    func deleteDiaryEntry(_ entryId: Int, person: String) async throws {
+        try await sendNoContent("DELETE", personPath(person) + "/diary/entries/\(entryId)")
+        invalidate(["diary"], person: person)
     }
 
     // MARK: Workouts

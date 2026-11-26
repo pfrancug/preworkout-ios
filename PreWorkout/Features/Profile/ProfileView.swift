@@ -67,6 +67,16 @@ struct ProfileView: View {
                     } label: {
                         Label("Ustawienia", systemImage: "gearshape")
                     }
+                    if let privacy = URL(string: "https://preworkout.fit/privacy") {
+                        Link(destination: privacy) {
+                            Label("Polityka prywatności", systemImage: "hand.raised")
+                        }
+                    }
+                    if let support = URL(string: "https://preworkout.fit/support") {
+                        Link(destination: support) {
+                            Label("Wsparcie", systemImage: "questionmark.circle")
+                        }
+                    }
                 }
             }
             .navigationTitle("Profil")
@@ -170,16 +180,22 @@ struct ProfileView: View {
 
     private var bodySection: some View {
         Section {
-            if let weight {
+            NavigationLink {
+                WeightView()
+            } label: {
                 LabeledContent("Waga") {
-                    VStack(alignment: .trailing, spacing: 0) {
-                        Text(verbatim: "\(weight.kg.short()) kg").monospacedDigit()
-                        Text(DayString.label(weight.date)).font(.caption).foregroundStyle(.secondary)
+                    if let weight {
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text(verbatim: "\(weight.kg.short()) kg").monospacedDigit()
+                            Text(DayString.label(weight.date)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("Dodaj").foregroundStyle(.secondary)
                     }
                 }
-                if let bmi {
-                    LabeledContent("BMI", value: bmi.short())
-                }
+            }
+            if let bmi {
+                LabeledContent("BMI", value: bmi.short())
             }
             NavigationLink {
                 CalculatorView()

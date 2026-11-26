@@ -42,8 +42,24 @@ struct NutritionGoalVersion: Codable, Identifiable, Hashable {
     var isRemoval: Bool { kcal == nil && protein == nil && fat == nil && carbs == nil }
 }
 
-/// Diary row (only the fields the app reads).
-struct DiaryRow: Decodable {
-    let date: String
-    let weight: Double?
+/// Diary row (only the fields the app reads). `id` is 0 when an older cache omitted it.
+struct DiaryRow: Decodable, Identifiable, Hashable {
+    var id: Int
+    var date: String
+    var weight: Double?
+
+    private enum CodingKeys: String, CodingKey { case id, date, weight }
+
+    init(id: Int, date: String, weight: Double?) {
+        self.id = id
+        self.date = date
+        self.weight = weight
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(Int.self, forKey: .id) ?? 0
+        date = try c.decode(String.self, forKey: .date)
+        weight = try c.decodeIfPresent(Double.self, forKey: .weight)
+    }
 }

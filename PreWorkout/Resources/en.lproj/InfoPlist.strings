@@ -1,2 +1,6 @@
 /* App name on the Home Screen */
 "CFBundleDisplayName" = "PreWorkout";
+
+/* HealthKit */
+"NSHealthShareUsageDescription" = "PreWorkout reads your weight from the Health app so it can show your history and keep it in sync with your diary.";
+"NSHealthUpdateUsageDescription" = "PreWorkout writes weight to the Health app when you add or change a measurement in your diary.";

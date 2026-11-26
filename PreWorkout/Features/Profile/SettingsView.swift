@@ -70,6 +70,12 @@ struct SettingsView: View {
             Section("Aplikacja") {
                 LabeledContent("Serwer", value: ServerConfig.baseURL?.host() ?? "–")
                 LabeledContent("Wersja", value: version)
+                if let privacy = URL(string: "https://preworkout.fit/privacy") {
+                    Link("Polityka prywatności", destination: privacy)
+                }
+                if let support = URL(string: "https://preworkout.fit/support") {
+                    Link("Wsparcie", destination: support)
+                }
             }
 
             Section {

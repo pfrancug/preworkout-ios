@@ -1,2 +1,6 @@
 /* App name on the Home Screen */
 "CFBundleDisplayName" = "PreWorkout";
+
+/* HealthKit */
+"NSHealthShareUsageDescription" = "PreWorkout odczytuje wagę z aplikacji Health, żeby pokazać historię i trzymać ją w zgodzie z dziennikiem.";
+"NSHealthUpdateUsageDescription" = "PreWorkout zapisuje wagę do aplikacji Health, gdy dodasz lub zmienisz pomiar w dzienniku.";

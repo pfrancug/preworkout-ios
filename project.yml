@@ -31,6 +31,7 @@ targets:
       - path: Shared
     dependencies:
       - target: PreWorkoutLiveActivity
+      - sdk: HealthKit.framework
     info:
       path: PreWorkout/Info.plist
       properties:
@@ -45,6 +46,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         APIBaseURL: $(API_BASE_URL)
         NSSupportsLiveActivities: true
+        NSHealthShareUsageDescription: PreWorkout odczytuje wagę z aplikacji Health, żeby pokazać historię i trzymać ją w zgodzie z dziennikiem.
+        NSHealthUpdateUsageDescription: PreWorkout zapisuje wagę do aplikacji Health, gdy dodasz lub zmienisz pomiar w dzienniku.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
