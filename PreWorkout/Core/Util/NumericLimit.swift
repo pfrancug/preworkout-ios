@@ -114,7 +114,7 @@ extension KeyedDecodingContainer {
     /// non-finite or outside `limit`: bad server / cache data must not break a screen.
     func lenientDouble(_ key: Key, _ limit: NumericLimit) -> Double? {
         guard let value = try? decodeIfPresent(Double.self, forKey: key) else { return nil }
-        return value.within(limit)
+        return Optional(value).within(limit)
     }
 
     func lenientInt(_ key: Key, _ limit: NumericLimit) -> Int? {
