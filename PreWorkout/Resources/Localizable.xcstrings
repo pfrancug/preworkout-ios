@@ -492,6 +492,16 @@
         }
       }
     },
+    "Brak treningów tego dnia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No workouts on this day"
+          }
+        }
+      }
+    },
     "Brak zapisanych serii — nie ma czego zapisać.": {
       "localizations": {
         "en": {
@@ -1328,6 +1338,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change the language in iOS Settings › PreWorkout › Language."
+          }
+        }
+      }
+    },
+    "Kalendarz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar"
           }
         }
       }

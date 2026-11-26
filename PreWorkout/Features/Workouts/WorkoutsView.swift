@@ -45,6 +45,13 @@ struct WorkoutsView: View {
             }
             .navigationTitle("Treningi")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        WorkoutCalendarView()
+                    } label: {
+                        Label("Kalendarz", systemImage: "calendar")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Nowy trening", systemImage: "plus") { creating = true }
                 }
@@ -130,7 +137,7 @@ struct WorkoutsView: View {
     }
 }
 
-private struct WorkoutRow: View {
+struct WorkoutRow: View {
     let workout: WorkoutSummary
 
     var body: some View {

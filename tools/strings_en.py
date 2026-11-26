@@ -401,6 +401,8 @@ EN = {
     "Kalorie i waga": "Calories and weight",
     "Kalkulator, cel dzienny i historia, która idzie za Tobą": "Calculator, daily goal and a history that follows you",
     "Logowanie tylko przez Apple. Twoje treningi zostają na Twoim koncie.": "Sign in with Apple only. Your workouts stay on your account.",
+    "Kalendarz": "Calendar",
+    "Brak treningów tego dnia": "No workouts on this day",
     "1 próba": "1 attempt",
     "%lld próby": "%lld attempts",
     "%lld prób": "%lld attempts",
