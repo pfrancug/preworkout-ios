@@ -70,8 +70,7 @@ enum SentryBootstrap {
             user.name = nil
             if let data = user.data {
                 var cleaned: [String: Any] = [:]
-                for (rawKey, value) in data {
-                    let key = rawKey as? String ?? String(describing: rawKey)
+                for (key, value) in data {
                     if isSensitiveKey(key) {
                         cleaned[key] = "[redacted]"
                     } else if let text = value as? String, containsSensitive(text) {
@@ -99,14 +98,17 @@ enum SentryBootstrap {
                     crumb.message = "[redacted]"
                 }
                 if let data = crumb.data {
-                    crumb.data = scrubDictionary(data)
+                    let cleaned = scrubDictionary(data)
+                    for (key, value) in cleaned {
+                        crumb.setData(value: value, key: key)
+                    }
                 }
             }
         }
         if let request = event.request {
-            request.data = nil
             request.cookies = nil
             request.headers = nil
+            request.queryString = nil
             event.request = request
         }
         if let message = event.message?.formatted, containsSensitive(message) {
