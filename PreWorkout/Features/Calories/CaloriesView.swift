@@ -1,14 +1,5 @@
 import SwiftUI
 
-/// Tab: calorie calculator (Mifflin-St Jeor) and the saved daily goal.
-struct CaloriesView: View {
-    var body: some View {
-        NavigationStack {
-            CalculatorView()
-        }
-    }
-}
-
 /// Everything the calculator shows, kept per person on the phone so the tab
 /// opens with real values at once. Empty until something is known: no
 /// made-up defaults.

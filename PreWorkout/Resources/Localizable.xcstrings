@@ -292,6 +292,16 @@
         }
       }
     },
+    "Aktywność": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        }
+      }
+    },
     "Aktywny": {
       "localizations": {
         "en": {
@@ -462,6 +472,16 @@
         }
       }
     },
+    "Brak aktywności tego dnia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing on this day"
+          }
+        }
+      }
+    },
     "Brak aliasów": {
       "localizations": {
         "en": {
@@ -508,16 +528,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No workouts"
-          }
-        }
-      }
-    },
-    "Brak treningów tego dnia": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No workouts on this day"
           }
         }
       }
@@ -642,12 +652,12 @@
         }
       }
     },
-    "Ciało i odżywianie": {
+    "Ciało": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Body and nutrition"
+            "value": "Body"
           }
         }
       }
@@ -842,6 +852,16 @@
         }
       }
     },
+    "Dodaj aktywność": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add activity"
+          }
+        }
+      }
+    },
     "Dodaj alias": {
       "localizations": {
         "en": {
@@ -858,6 +878,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add to superset"
+          }
+        }
+      }
+    },
+    "Dodaj notatkę": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add note"
           }
         }
       }
@@ -1092,6 +1122,16 @@
         }
       }
     },
+    "Dziś": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        }
+      }
+    },
     "Dźwięk na koniec przerwy": {
       "localizations": {
         "en": {
@@ -1118,6 +1158,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
+          }
+        }
+      }
+    },
+    "Edytuj aktywność": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit activity"
           }
         }
       }
@@ -1202,6 +1252,26 @@
         }
       }
     },
+    "Godzina": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        }
+      }
+    },
+    "Godzina końca": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End time"
+          }
+        }
+      }
+    },
     "Gotowe": {
       "localizations": {
         "en": {
@@ -1278,6 +1348,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importing %lld/%lld"
+          }
+        }
+      }
+    },
+    "Inna": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
           }
         }
       }
@@ -1472,6 +1552,16 @@
         }
       }
     },
+    "Kalorie i cel dzienny": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calories & daily goal"
+          }
+        }
+      }
+    },
     "Kalorie i waga": {
       "localizations": {
         "en": {
@@ -1527,7 +1617,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Finish"
+            "value": "End"
           }
         }
       }
@@ -1643,6 +1733,16 @@
       }
     },
     "Mies.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Month"
+          }
+        }
+      }
+    },
+    "Miesiąc": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1982,6 +2082,16 @@
         }
       }
     },
+    "Notatka dnia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day note"
+          }
+        }
+      }
+    },
     "Notatka do serii": {
       "localizations": {
         "en": {
@@ -2115,6 +2225,16 @@
         }
       }
     },
+    "Odżywianie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nutrition"
+          }
+        }
+      }
+    },
     "Opis": {
       "localizations": {
         "en": {
@@ -2211,6 +2331,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Calorie plan"
+          }
+        }
+      }
+    },
+    "Początek": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
           }
         }
       }
@@ -2594,6 +2724,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Attempts"
+          }
+        }
+      }
+    },
+    "Pusta notatka usuwa notatkę tego dnia.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An empty note removes this day's note."
           }
         }
       }
@@ -3194,6 +3334,16 @@
         }
       }
     },
+    "Tydzień": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
+          }
+        }
+      }
+    },
     "Tylko własne": {
       "localizations": {
         "en": {
@@ -3320,6 +3470,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete this exercise?"
+          }
+        }
+      }
+    },
+    "Usunąć tę aktywność?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this activity?"
           }
         }
       }
@@ -3570,6 +3730,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Haptics"
+          }
+        }
+      }
+    },
+    "Widok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
           }
         }
       }

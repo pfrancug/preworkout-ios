@@ -12,9 +12,18 @@ struct ExercisesView: View {
     @State private var showArchived = false
     @State private var creating = false
     @State private var choosingDatasets = false
+    /// Pushed from the Workouts tab (no own NavigationStack).
+    var embedded = false
 
     var body: some View {
-        NavigationStack {
+        if embedded {
+            screen
+        } else {
+            NavigationStack { screen }
+        }
+    }
+
+    private var screen: some View {
             List {
                 if let error = store.error, store.all.isEmpty {
                     Section {
@@ -78,7 +87,6 @@ struct ExercisesView: View {
             }
             .task { await store.loadIfNeeded() }
             .task(id: query) { await search() }
-        }
     }
 
     private var filtersActive: Bool { modality != nil || category != nil || customOnly || showArchived }

@@ -405,6 +405,8 @@ struct WorkoutSummary: Decodable, Identifiable, Hashable {
     let date: String
     let title: String
     let categoryId: String?
+    /// Calendar activity this workout was started from (shown once, as the workout).
+    let calendarEntryId: String?
     let planDayId: String?
     let planDayName: String?
     let planName: String?

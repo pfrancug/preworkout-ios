@@ -55,7 +55,7 @@ struct MainTabView: View {
     @Environment(LiveStore.self) private var live
 
     enum Tab: String {
-        case workouts, exercises, live, calories, profile
+        case workouts, calendar, live, body, profile
     }
 
     /// Survives the re-creation on person switch.
@@ -67,16 +67,16 @@ struct MainTabView: View {
             WorkoutsView()
                 .tabItem { Label("Treningi", systemImage: "dumbbell") }
                 .tag(Tab.workouts)
-            ExercisesView()
-                .tabItem { Label("Ćwiczenia", systemImage: "figure.strengthtraining.traditional") }
-                .tag(Tab.exercises)
+            CalendarView()
+                .tabItem { Label("Kalendarz", systemImage: "calendar") }
+                .tag(Tab.calendar)
             LiveTab()
                 .tabItem { Label("Na żywo", systemImage: live.session != nil ? "record.circle.fill" : "play.circle.fill") }
                 .badge(live.session != nil ? Text(verbatim: "●") : nil)
                 .tag(Tab.live)
-            CaloriesView()
-                .tabItem { Label("Kalorie", systemImage: "flame") }
-                .tag(Tab.calories)
+            BodyView()
+                .tabItem { Label("Ciało", systemImage: "figure.arms.open") }
+                .tag(Tab.body)
             ProfileView()
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)

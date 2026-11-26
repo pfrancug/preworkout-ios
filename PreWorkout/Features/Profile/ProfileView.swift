@@ -1,8 +1,7 @@
 import PhotosUI
 import SwiftUI
 
-/// Tab: profile of the active person (photo, personal data, body and daily goal),
-/// person switch and app settings.
+/// Tab: profile of the active person (photo, personal data), person switch and app settings.
 struct ProfileView: View {
     @State private var whatsNew = WhatsNewStore.shared
     @Environment(AppState.self) private var appState
@@ -13,8 +12,6 @@ struct ProfileView: View {
     @State private var saved = 0
     @State private var photo: PhotosPickerItem?
     @State private var updatingPhoto = false
-    @State private var goal: NutritionGoal?
-    @State private var weight: (date: String, kg: Double)?
 
     var body: some View {
         @Bindable var appState = appState
@@ -43,10 +40,6 @@ struct ProfileView: View {
                     } footer: {
                         Text("Treningi, profil i cel dotyczą wybranej osoby.")
                     }
-                }
-
-                if state.value != nil {
-                    bodySection
                 }
 
                 Section {
@@ -180,45 +173,6 @@ struct ProfileView: View {
         }
     }
 
-    private var bodySection: some View {
-        Section {
-            NavigationLink {
-                WeightView()
-            } label: {
-                LabeledContent("Waga") {
-                    if let weight {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text(verbatim: "\(weight.kg.short()) kg").monospacedDigit()
-                            Text(DayString.label(weight.date)).font(.caption).foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Text("Dodaj").foregroundStyle(.secondary)
-                    }
-                }
-            }
-            if let bmi {
-                LabeledContent("BMI", value: bmi.short())
-            }
-            NavigationLink {
-                CalculatorView()
-            } label: {
-                LabeledContent {
-                    if let goal, goal.kcal != nil || goal.protein != nil || goal.fat != nil || goal.carbs != nil {
-                        Text(GoalFormat.summary(goal.kcal, goal.protein, goal.fat, goal.carbs))
-                            .font(.footnote)
-                            .multilineTextAlignment(.trailing)
-                    } else {
-                        Text("Brak celu")
-                    }
-                } label: {
-                    Label("Cel dzienny", systemImage: "target")
-                }
-            }
-        } header: {
-            Text("Ciało i odżywianie")
-        }
-    }
-
     // MARK: Helpers
 
     private func displayName(_ settings: UserSettings) -> String {
@@ -242,12 +196,6 @@ struct ProfileView: View {
             || form.age != original.age || form.height != original.height || form.sex != original.sex
     }
 
-    private var bmi: Double? {
-        guard let weight, let cm = Double(state.value?.height ?? ""), cm > 0 else { return nil }
-        let m = cm / 100
-        return weight.kg / (m * m)
-    }
-
     // MARK: Actions
 
     private func load() async {
@@ -255,12 +203,6 @@ struct ProfileView: View {
         if state.value == nil, let cached: UserSettings = DiskCache.read("settings", person: person) {
             form = cached
             state = .loaded(cached)
-        }
-        if goal == nil, let cached: NutritionGoal = DiskCache.read("goals", person: person) {
-            goal = cached
-        }
-        if weight == nil, let rows: [DiaryRow] = DiskCache.read("diary", person: person) {
-            weight = rows.filter { ($0.weight ?? 0) > 0 }.max { $0.date < $1.date }.map { (String($0.date.prefix(10)), $0.weight ?? 0) }
         }
         do {
             let settings = try await APIClient.shared.settings(person: person)
@@ -270,8 +212,6 @@ struct ProfileView: View {
             guard !Task.isCancelled else { return }
             if state.value == nil { state = .failed(error.localizedDescription) } else { self.error = error.localizedDescription }
         }
-        if let value = try? await APIClient.shared.goal(person: person) { goal = value } else { goal = nil }
-        if let latest = try? await APIClient.shared.latestWeight(person: person) { weight = latest }
     }
 
     private func validated() -> UserSettings? {

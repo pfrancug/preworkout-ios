@@ -145,6 +145,46 @@ extension APIClient {
         invalidate(["diary"], person: person)
     }
 
+    // MARK: Calendar
+
+    func calendarEntries(person id: String) async throws -> CalendarEntries {
+        try await get(personPath(id) + "/calendar/entries", cache: cacheKey("calendar-entries", person: id))
+    }
+
+    func calendarNotes(person id: String) async throws -> [String: String] {
+        try await get(personPath(id) + "/calendar/notes", cache: cacheKey("calendar-notes", person: id))
+    }
+
+    func createCalendarEntry(date: String, entry: CalendarEntryInput, person id: String) async throws -> CalendarEntry {
+        struct Body: Encodable {
+            let date: String
+            let entry: CalendarEntryInput
+        }
+        let created: CalendarEntry = try await send(
+            "POST",
+            personPath(id) + "/calendar/entries",
+            body: Body(date: date, entry: entry)
+        )
+        invalidate(["calendar-entries"], person: id)
+        return created
+    }
+
+    func updateCalendarEntry(_ entryId: String, patch: CalendarEntryPatch, person id: String) async throws {
+        try await sendNoContent("PATCH", personPath(id) + "/calendar/entries/\(seg(entryId))", body: patch)
+        invalidate(["calendar-entries"], person: id)
+    }
+
+    func deleteCalendarEntry(_ entryId: String, person id: String) async throws {
+        try await sendNoContent("DELETE", personPath(id) + "/calendar/entries/\(seg(entryId))")
+        invalidate(["calendar-entries"], person: id)
+    }
+
+    /// An empty note removes the note of that day.
+    func saveCalendarNote(date: String, note: String, person id: String) async throws {
+        try await sendNoContent("PUT", personPath(id) + "/calendar/notes/\(seg(date))", body: ["note": note])
+        invalidate(["calendar-notes"], person: id)
+    }
+
     // MARK: Workouts
 
     /// Live workout left in the server drafts table (`workout` / `live-session`); nil when none or unreadable.

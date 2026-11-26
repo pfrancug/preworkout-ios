@@ -47,9 +47,9 @@ struct WorkoutsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
-                        WorkoutCalendarView()
+                        ExercisesView(embedded: true)
                     } label: {
-                        Label("Kalendarz", systemImage: "calendar")
+                        Label("Ćwiczenia", systemImage: "figure.strengthtraining.traditional")
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
