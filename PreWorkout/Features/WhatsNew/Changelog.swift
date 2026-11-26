@@ -38,6 +38,8 @@ enum Changelog {
 
     static let entries: [ChangelogEntry] = [
         ChangelogEntry(version: "0.1.6", date: nil, items: [
+            .big("hourglass", "Nowy typ „Sesja”: blok czasu, np. 40 minut handstanda, z licznikiem prób i notatką",
+                 "New Session type: a time block, e.g. 40 minutes of handstand, with an attempts counter and a note"),
             .big("timer", "Seria na czas zapisuje się sama po „Stop”, a przerwa startuje od razu",
                  "Timed sets save themselves when you tap Stop, and rest starts right away"),
             .big("clock", "Czas wszędzie jako minuty i sekundy (1:30, 1:05:00), ustawiany wygodnymi kółkami",
@@ -52,6 +54,8 @@ enum Changelog {
                    "Choosing where to add an exercise is a clear sheet; confirmations sit in the middle of the screen"),
             .small("clock.badge.checkmark", "Zegar treningu po godzinie mieści się w jednej linii, także na Dynamic Island",
                    "The workout clock stays on one line past one hour, also in the Dynamic Island"),
+            .small("bolt.horizontal", "Aplikacja otwiera się od razu z danymi na telefonie i odświeża je w tle tylko, gdy coś się zmieniło",
+                   "The app opens instantly from data on the phone and refreshes in the background only when something has changed"),
             .small("sparkles", "Nowy ekran „Co nowego” w Profilu",
                    "New What's new screen in Profile"),
         ]),

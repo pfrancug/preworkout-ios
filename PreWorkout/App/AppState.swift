@@ -50,26 +50,57 @@ final class AppState {
     }
 
     func bootstrap() async {
-        phase = .checking
         guard ServerConfig.baseURL != nil else {
             phase = .needsLogin
             return
         }
+        if hydrateFromCache() {
+            phase = .ready
+            Task { await refreshFromNetwork(showErrors: false) }
+            return
+        }
+        phase = .checking
+        await refreshFromNetwork(showErrors: true)
+    }
+
+    /// Instant launch: cached session + people for the last signed-in user.
+    @discardableResult
+    private func hydrateFromCache() -> Bool {
+        guard KeychainToken.get() != nil,
+              let userId = DiskCache.currentUserId(),
+              let session: AuthSession = DiskCache.read(.init(userId: userId, personId: nil, name: "session")),
+              session.authenticated,
+              let cachedPeople: [Person] = DiskCache.read(.init(userId: userId, personId: nil, name: "people"))
+        else { return false }
+        account = session.user
+        people = cachedPeople
+        if !people.contains(where: { $0.id == activePersonId }) {
+            activePersonId = people.first(where: \.isOwner)?.id ?? people.first?.id ?? ""
+        }
+        return true
+    }
+
+    private func refreshFromNetwork(showErrors: Bool) async {
         do {
             let health = try await api.health()
             aiEnabled = health.ai
             let session = try await api.authSession()
             if session.required && !session.authenticated {
                 KeychainToken.clear()
+                DiskCache.clearAll()
                 account = nil
+                people = []
                 phase = .needsLogin
                 return
             }
+            if let user = session.user { DiskCache.setCurrentUser(user.id) }
             account = session.user
             try await loadPeople()
             phase = .ready
         } catch {
-            phase = .offline(error.localizedDescription)
+            if showErrors && phase != .ready {
+                phase = .offline(error.localizedDescription)
+            }
         }
     }
 
@@ -81,8 +112,10 @@ final class AppState {
             fullName: payload.fullName,
             link: false
         )
+        DiskCache.clearAll()
         KeychainToken.set(response.token)
         api.clearSessionCookies()
+        DiskCache.setCurrentUser(response.user.id)
         account = response.user
         activePersonId = ""
         categories = []
@@ -126,6 +159,7 @@ final class AppState {
         categories = []
         categoriesPersonId = nil
         activePersonId = ""
+        DiskCache.clearAll()
         if wipeUserDefaults {
             if let domain = Bundle.main.bundleIdentifier {
                 UserDefaults.standard.removePersistentDomain(forName: domain)
@@ -139,8 +173,12 @@ final class AppState {
     private var categoriesPersonId: String?
 
     func loadCategoriesIfNeeded() async {
-        guard !activePersonId.isEmpty, categoriesPersonId != activePersonId else { return }
+        guard !activePersonId.isEmpty else { return }
         let personId = activePersonId
+        if categoriesPersonId != personId, let cached: [ActivityCategory] = DiskCache.read("categories", person: personId) {
+            categories = cached
+            categoriesPersonId = personId
+        }
         if let list = try? await api.categories(person: personId) {
             categories = list
             categoriesPersonId = personId

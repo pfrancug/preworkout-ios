@@ -31,6 +31,9 @@ struct WorkoutDetailView: View {
 
                 ForEach(workout.exercises) { exercise in
                     Section {
+                        if exercise.isSession {
+                            Text(SessionFormat.summary(exercise))
+                        } else {
                         ForEach(Array(exercise.sets.enumerated()), id: \.offset) { index, set in
                             HStack(alignment: .firstTextBaseline) {
                                 Text(verbatim: "\(index + 1).")
@@ -47,7 +50,8 @@ struct WorkoutDetailView: View {
                                 if set.isWarmup { Tag("Rozgrzewka", color: .orange) }
                             }
                         }
-                        if !exercise.notes.isEmpty {
+                        }
+                        if !exercise.isSession, !exercise.notes.isEmpty {
                             Text(exercise.notes).font(.footnote).foregroundStyle(.secondary)
                         }
                     } header: {
@@ -109,9 +113,14 @@ struct WorkoutDetailView: View {
     }
 
     private func load() async {
-        if state.value == nil { state = .loading }
+        let person = appState.activePersonId
+        if state.value == nil, let cached: Workout = DiskCache.read("workout-\(workoutId)", person: person) {
+            state = .loaded(cached)
+        } else if state.value == nil {
+            state = .loading
+        }
         do {
-            state = .loaded(try await APIClient.shared.workout(workoutId, person: appState.activePersonId))
+            state = .loaded(try await APIClient.shared.workout(workoutId, person: person))
         } catch {
             guard !Task.isCancelled else { return }
             if state.value == nil { state = .failed(error.localizedDescription) } else { actionError = error.localizedDescription }

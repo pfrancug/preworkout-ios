@@ -98,9 +98,14 @@ struct WorkoutsView: View {
     }
 
     private func load() async {
-        if state.value == nil { state = .loading }
+        let person = appState.activePersonId
+        if state.value == nil, let cached: [WorkoutSummary] = DiskCache.read("workouts", person: person) {
+            state = .loaded(cached)
+        } else if state.value == nil {
+            state = .loading
+        }
         do {
-            let list = try await APIClient.shared.workouts(person: appState.activePersonId)
+            let list = try await APIClient.shared.workouts(person: person)
             state = .loaded(list)
         } catch {
             guard !Task.isCancelled else { return }

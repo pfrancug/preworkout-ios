@@ -64,10 +64,11 @@ struct LiveWorkoutView: View {
         }
         .sheet(isPresented: $picking) {
             ExercisePickerView { exercise in
-                if addGroupId != nil || live.session?.currentExercise == nil {
-                    add(exercise, mode: .end)
+                if addGroupId != nil {
+                    add(exercise, mode: .superset)
                 } else {
-                    // The picker sheet closes first; then the placement sheet opens.
+                    // The picker sheet closes first; then the placement sheet opens
+                    // (also for the first exercise, so the session toggle is always visible).
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { picked = exercise }
                 }
             }
@@ -75,9 +76,10 @@ struct LiveWorkoutView: View {
         .sheet(item: $picked) { exercise in
             AddPlacementSheet(
                 exerciseName: exercise.name,
-                currentName: live.session?.currentExercise.map { live.name(of: $0) } ?? ""
-            ) { mode in
-                add(exercise, mode: mode)
+                currentName: live.session?.currentExercise.map { live.name(of: $0) } ?? "",
+                hasCurrent: live.session?.currentExercise != nil
+            ) { mode, asSession in
+                add(exercise, mode: mode, asSession: asSession)
             }
         }
         // Alerts (centered, no arrow): these are opened from menus and sheets,
@@ -133,7 +135,12 @@ struct LiveWorkoutView: View {
                 Group {
                     switch st {
                     case .empty: emptyStage.browsable(browseGesture(session))
-                    case .active: activeStage(session, now: now, mood: md)
+                    case .active:
+                        if session.currentExercise?.item.isSession == true {
+                            sessionStage(session, now: now).browsable(browseGesture(session))
+                        } else {
+                            activeStage(session, now: now, mood: md)
+                        }
                     case .rest: restStage(session, now: now).browsable(browseGesture(session))
                     case .complete: completeStage(session).browsable(browseGesture(session))
                     }
@@ -622,6 +629,44 @@ struct LiveWorkoutView: View {
         }
     }
 
+    // MARK: Session block
+
+    private func sessionStage(_ session: LiveSession, now: Double) -> some View {
+        let e = session.currentExercise!
+        let elapsed = Double(e.pending.durationSeconds ?? 0) + (session.setTimer?.elapsed(now) ?? 0)
+        return SessionStage(
+            name: live.name(of: e),
+            elapsed: elapsed,
+            running: session.setTimer != nil,
+            attempts: e.pending.attempts ?? 0,
+            note: e.pending.notes,
+            onStart: {
+                live.tap()
+                live.update { s, t in s.startSessionClock(t) }
+            },
+            onPause: {
+                live.tap()
+                live.update { s, t in s.pauseSessionClock(t) }
+            },
+            onResume: {
+                live.tap()
+                live.update { s, t in s.startSessionClock(t) }
+            },
+            onAttempts: { n in
+                live.update { s, _ in
+                    guard s.exercises.indices.contains(s.current) else { return }
+                    s.exercises[s.current].pending.attempts = n > 0 ? n : nil
+                }
+            },
+            onNote: { text in
+                live.update { s, _ in
+                    guard s.exercises.indices.contains(s.current) else { return }
+                    s.exercises[s.current].pending.notes = text
+                }
+            }
+        )
+    }
+
     // MARK: Complete / empty
 
     private func completeStage(_ session: LiveSession) -> some View {
@@ -658,7 +703,11 @@ struct LiveWorkoutView: View {
                     .font(.system(size: 30, weight: .heavy))
                     .multilineTextAlignment(.center)
                     .padding(.top, 4)
-                if count > 0 {
+                if e.item.isSession, e.status != .skipped {
+                    Text(SessionFormat.summary(e.item))
+                        .font(.system(size: 15)).foregroundStyle(LV.muted).monospacedDigit()
+                        .padding(.top, 8)
+                } else if count > 0 {
                     HStack(spacing: 6) {
                         Text("\(count) serii")
                         if reps > 0 { Text(verbatim: "· \(reps)"); Text("powt.") }
@@ -677,7 +726,7 @@ struct LiveWorkoutView: View {
                             Image(systemName: "arrow.uturn.backward")
                             Text("Przywróć")
                         }
-                    } else {
+                    } else if !e.item.isSession {
                         // One more set = set N+1 of N+1, never back to set 1.
                         LVPill(action: {
                             live.tap()
@@ -700,7 +749,9 @@ struct LiveWorkoutView: View {
                 NextCard(
                     caption: Text("Następnie"),
                     name: live.name(of: next),
-                    detail: [String(localized: "\(next.plannedSets) serii"), LiveFormat.pendingText(next)].compactMap { $0 }.joined(separator: " · ")
+                    detail: next.item.isSession
+                        ? String(localized: "Sesja")
+                        : [String(localized: "\(next.plannedSets) serii"), LiveFormat.pendingText(next)].compactMap { $0 }.joined(separator: " · ")
                 )
             }
         }
@@ -757,7 +808,46 @@ struct LiveWorkoutView: View {
                 }
             }
         case .active:
-            activeDock(session)
+            if session.currentExercise?.item.isSession == true {
+                sessionDock(session, now: now, mood: mood)
+            } else {
+                activeDock(session)
+            }
+        }
+    }
+
+    private func sessionDock(_ session: LiveSession, now: Double, mood: LiveMood) -> some View {
+        let index = session.current
+        let e = session.exercises[index]
+        let elapsed = Double(e.pending.durationSeconds ?? 0) + (session.setTimer?.elapsed(now) ?? 0)
+        let canFinish = elapsed >= 1
+        return VStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 22) {
+                SideButton(icon: "forward.end", label: Text("Pomiń")) {
+                    live.tap()
+                    forward = true
+                    live.update { s, t in
+                        guard s.exercises.indices.contains(index) else { return }
+                        s.setTimer = nil
+                        s.skipExercise(index)
+                    }
+                }
+                VStack(spacing: 8) {
+                    LVOrb(mood: mood, label: "Zakończ sesję") {
+                        guard canFinish else { return }
+                        live.tap()
+                        forward = true
+                        live.update { s, t in s.finishSession(index, t) }
+                    } content: {
+                        Image(systemName: "checkmark").font(.system(size: 42, weight: .heavy))
+                    }
+                    .opacity(canFinish ? 1 : 0.4)
+                    .disabled(!canFinish)
+                    Text("Zakończ sesję").font(.system(size: 14, weight: .bold))
+                }
+                SideButton(icon: "list.number", label: Text("Lista")) { sheet = .queue }
+            }
+            Color.clear.frame(height: 28)
         }
     }
 
@@ -922,7 +1012,7 @@ struct LiveWorkoutView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: action)
     }
 
-    private func add(_ exercise: Exercise, mode: AddMode) {
+    private func add(_ exercise: Exercise, mode: AddMode, asSession: Bool = false) {
         let group = addGroupId
         live.tap()
         live.update { s, _ in
@@ -932,13 +1022,13 @@ struct LiveWorkoutView: View {
                 s.addExercise(exercise.id, mode: .superset, defaultRest: live.defaultRest)
                 s.current = min(previous, s.exercises.count - 1)
             } else {
-                s.addExercise(exercise.id, mode: mode, defaultRest: live.defaultRest)
+                s.addExercise(exercise.id, mode: mode, defaultRest: live.defaultRest, asSession: asSession)
             }
             s.ensureComboPending(measurementOf: { id in
                 id == exercise.id ? exercise.measurement : measureId(id)
             })
             // A fresh exercise shows a real number to do, not a dash.
-            if mode != .combo, let i = s.exercises.lastIndex(where: { $0.item.exerciseId == exercise.id && $0.item.sets.isEmpty }) {
+            if !asSession, mode != .combo, let i = s.exercises.lastIndex(where: { $0.item.exerciseId == exercise.id && $0.item.sets.isEmpty }) {
                 for f in SetField.primary(exercise.measurement) where f == .reps || f == .distance {
                     if f.get(s.exercises[i].pending) == nil { f.put(f.seed, into: &s.exercises[i].pending) }
                 }

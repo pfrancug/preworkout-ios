@@ -15,7 +15,10 @@ struct DraftExercise: Identifiable, Hashable {
     var notes = ""
     var groupId: String?
     var sequence: [String] = []
+    var kind: String = "sets"
     var sets: [DraftSet] = []
+
+    var isSession: Bool { kind == "session" }
 
     init(exerciseId: String, sets: [WorkoutSet] = [WorkoutSet()]) {
         self.exerciseId = exerciseId
@@ -30,6 +33,7 @@ struct DraftExercise: Identifiable, Hashable {
         notes = e.notes
         groupId = e.groupId
         sequence = e.sequence
+        kind = e.kind
         sets = e.sets.map { DraftSet(value: $0) }
     }
 
@@ -41,7 +45,8 @@ struct DraftExercise: Identifiable, Hashable {
         e.notes = notes
         e.groupId = groupId
         e.sequence = sequence
-        e.sets = sets.map(\.value)
+        e.kind = kind
+        e.sets = isSession ? [sets.first?.value ?? WorkoutSet()] : sets.map(\.value)
         return e
     }
 }

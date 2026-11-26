@@ -386,6 +386,16 @@ EN = {
     "godz.": "h",
     "min": "min",
     "sek.": "sec",
+    "Sesja": "Session",
+    "Sesja (blok czasu)": "Session (time block)",
+    "Jedno wejście na czas, bez serii i przerw": "One timed entry, no sets or rest",
+    "Próby": "Attempts",
+    "Zakończ sesję": "Finish session",
+    "Dodaj próbę": "Add attempt",
+    "Notatka (opcjonalnie)": "Note (optional)",
+    "1 próba": "1 attempt",
+    "%lld próby": "%lld attempts",
+    "%lld prób": "%lld attempts",
 }
 
 # Plural keys: Polish forms (one/few/many/other) and English (one/other).

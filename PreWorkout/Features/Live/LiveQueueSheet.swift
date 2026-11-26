@@ -132,7 +132,9 @@ private struct QueueRow: View {
                         .foregroundStyle(exercise.status == .skipped ? LV.faint : LV.text)
                         .lineLimit(2)
                 }
-                Text(verbatim: "\(exercise.item.sets.count) / \(max(exercise.plannedSets, exercise.item.sets.count))")
+                Text(verbatim: exercise.item.isSession
+                     ? (exercise.status == .done ? SessionFormat.summary(exercise.item) : String(localized: "Sesja"))
+                     : "\(exercise.item.sets.count) / \(max(exercise.plannedSets, exercise.item.sets.count))")
                     .font(.system(size: 13))
                     .foregroundStyle(LV.muted)
                     .monospacedDigit()

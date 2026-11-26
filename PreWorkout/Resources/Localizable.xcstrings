@@ -148,6 +148,26 @@
         }
       }
     },
+    "%lld prób": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld attempts"
+          }
+        }
+      }
+    },
+    "%lld próby": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld attempts"
+          }
+        }
+      }
+    },
     "%lld serii": {
       "localizations": {
         "pl": {
@@ -248,6 +268,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "1 próba": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 attempt"
           }
         }
       }
@@ -792,6 +822,16 @@
         }
       }
     },
+    "Dodaj próbę": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add attempt"
+          }
+        }
+      }
+    },
     "Dodaj serię": {
       "localizations": {
         "en": {
@@ -1218,6 +1258,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "One variant per line"
+          }
+        }
+      }
+    },
+    "Jedno wejście na czas, bez serii i przerw": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One timed entry, no sets or rest"
           }
         }
       }
@@ -1748,6 +1798,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Note"
+          }
+        }
+      }
+    },
+    "Notatka (opcjonalnie)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note (optional)"
           }
         }
       }
@@ -2328,6 +2388,16 @@
         }
       }
     },
+    "Próby": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attempts"
+          }
+        }
+      }
+    },
     "Płeć": {
       "localizations": {
         "en": {
@@ -2520,6 +2590,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server"
+          }
+        }
+      }
+    },
+    "Sesja": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session"
+          }
+        }
+      }
+    },
+    "Sesja (blok czasu)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session (time block)"
           }
         }
       }
@@ -3540,6 +3630,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finish set %lld"
+          }
+        }
+      }
+    },
+    "Zakończ sesję": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish session"
           }
         }
       }

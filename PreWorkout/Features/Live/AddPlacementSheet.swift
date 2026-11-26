@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// Where a freshly picked exercise goes. A sheet with four clear rows instead
+/// Where a freshly picked exercise goes. A sheet with clear rows instead
 /// of a dialog (on iOS 26 dialogs became popovers with an arrow).
 struct AddPlacementSheet: View {
     let exerciseName: String
     let currentName: String
-    let onPick: (AddMode) -> Void
+    let hasCurrent: Bool
+    let onPick: (AddMode, Bool) -> Void
+    @State private var asSession = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -19,11 +21,29 @@ struct AddPlacementSheet: View {
             }
             .padding(.top, 22)
 
+            Toggle(isOn: $asSession) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sesja (blok czasu)")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Jedno wejście na czas, bez serii i przerw")
+                        .font(.system(size: 13))
+                        .foregroundStyle(LV.muted)
+                }
+            }
+            .tint(LV.lime)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .lvGlass(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
             VStack(spacing: 8) {
-                row(.next, icon: "arrow.turn.down.right", title: Text("Zaraz po bieżącym"), detail: Text("Następne po: \(currentName)"))
+                if hasCurrent {
+                    row(.next, icon: "arrow.turn.down.right", title: Text("Zaraz po bieżącym"), detail: Text("Następne po: \(currentName)"))
+                }
                 row(.end, icon: "text.append", title: Text("Na koniec"), detail: Text("Ostatnie ćwiczenie treningu"))
-                row(.superset, icon: "arrow.left.arrow.right", title: Text("Superseria z bieżącym"), detail: Text("Na zmianę z: \(currentName), przerwa po rundzie"))
-                row(.combo, icon: "link", title: Text("Do bieżącej kombinacji"), detail: Text("Kolejny ruch tej samej serii, bez przerwy"))
+                if hasCurrent && !asSession {
+                    row(.superset, icon: "arrow.left.arrow.right", title: Text("Superseria z bieżącym"), detail: Text("Na zmianę z: \(currentName), przerwa po rundzie"))
+                    row(.combo, icon: "link", title: Text("Do bieżącej kombinacji"), detail: Text("Kolejny ruch tej samej serii, bez przerwy"))
+                }
             }
 
             Button("Anuluj") { dismiss() }
@@ -39,7 +59,7 @@ struct AddPlacementSheet: View {
 
     private func row(_ mode: AddMode, icon: String, title: Text, detail: Text) -> some View {
         Button {
-            onPick(mode)
+            onPick(mode, asSession)
             dismiss()
         } label: {
             HStack(spacing: 14) {

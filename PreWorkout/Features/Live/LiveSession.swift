@@ -69,8 +69,13 @@ struct LiveExercise: Codable, Hashable, Identifiable {
         item.sets = []
         self.item = item
         self.target = target
-        plannedSets = max(1, Int(target?["targetSets"] ?? 3))
-        restSeconds = target?["restSeconds"].map { Int($0) } ?? defaultRest
+        if item.isSession {
+            plannedSets = 1
+            restSeconds = 0
+        } else {
+            plannedSets = max(1, Int(target?["targetSets"] ?? 3))
+            restSeconds = target?["restSeconds"].map { Int($0) } ?? defaultRest
+        }
         var pending = WorkoutSet()
         if let target {
             pending.reps = (target["targetRepsMax"] ?? target["targetRepsMin"]).map { Int($0) }
@@ -266,12 +271,16 @@ struct LiveSession: Codable, Hashable {
         exercises[index].status = .active
         if exercises[index].startedAt == nil { exercises[index].startedAt = now }
         exercises[index].finishedAt = nil
-        if index != current { setTimer = nil }
+        if index != current {
+            parkSessionClock(now)
+            setTimer = nil
+        }
         current = index
     }
 
     mutating func goTo(_ index: Int) {
         guard index != current, !exercises.isEmpty else { return }
+        parkSessionClock()
         current = clamp(index)
         setTimer = nil
     }
@@ -334,7 +343,7 @@ struct LiveSession: Codable, Hashable {
 
     /// Adds a library exercise at the end, right after the current one, in a
     /// superset with the current one, or as the next step of the current combo.
-    mutating func addExercise(_ exerciseId: String, mode: AddMode, defaultRest: Int) {
+    mutating func addExercise(_ exerciseId: String, mode: AddMode, defaultRest: Int, asSession: Bool = false) {
         let cur = currentExercise
         if mode == .combo, let cur {
             let seq = cur.item.sequence.count > 1 ? cur.item.sequence + [exerciseId] : [cur.item.exerciseId, exerciseId]
@@ -342,6 +351,11 @@ struct LiveSession: Codable, Hashable {
             return
         }
         var fresh = LiveExercise(item: WorkoutExercise(exerciseId: exerciseId), defaultRest: cur?.restSeconds ?? defaultRest)
+        if asSession {
+            fresh.item.kind = "session"
+            fresh.plannedSets = 1
+            fresh.restSeconds = 0
+        }
         if mode == .superset, let cur {
             let groupId = cur.item.groupId ?? newId()
             let members = groupIndices(groupId)
@@ -498,6 +512,53 @@ struct LiveSession: Codable, Hashable {
         rest = e.restSeconds > 0
             ? LiveRest(startedAt: now, durationSec: Double(e.restSeconds), itemId: e.item.id, setIndex: setIndex)
             : nil
+    }
+
+    /// If the current exercise is a running session, freeze its elapsed time into pending.
+    mutating func parkSessionClock(_ now: Double? = nil) {
+        guard currentExercise?.item.isSession == true, setTimer != nil else { return }
+        pauseSessionClock(now ?? Date().timeIntervalSince1970)
+    }
+
+    /// Stops the session clock and adds the elapsed seconds to the pending duration.
+    mutating func pauseSessionClock(_ now: Double) {
+        guard exercises.indices.contains(current), let timer = setTimer else { return }
+        let extra = Int(timer.elapsed(now).rounded())
+        exercises[current].pending.durationSeconds = (exercises[current].pending.durationSeconds ?? 0) + extra
+        setTimer = nil
+    }
+
+    mutating func startSessionClock(_ now: Double) {
+        guard exercises.indices.contains(current) else { return }
+        closeRest(now)
+        if exercises[current].startedAt == nil { exercises[current].startedAt = now }
+        setTimer = LiveSetTimer(startedAt: now, targetSec: nil)
+    }
+
+    /// Saves the session as one duration set (no rest) and moves on.
+    mutating func finishSession(_ index: Int, _ now: Double) {
+        guard exercises.indices.contains(index) else { return }
+        closeRest(now)
+        var seconds = exercises[index].pending.durationSeconds ?? 0
+        if let timer = setTimer { seconds += Int(timer.elapsed(now).rounded()) }
+        seconds = max(1, seconds)
+        setTimer = nil
+        var set = exercises[index].pending
+        set.durationSeconds = seconds
+        set.reps = nil
+        set.holdSeconds = nil
+        set.restSeconds = nil
+        exercises[index].item.kind = "session"
+        exercises[index].item.sets = [set]
+        if exercises[index].item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            exercises[index].item.notes = set.notes
+        }
+        exercises[index].status = .done
+        exercises[index].finishedAt = now
+        if exercises[index].startedAt == nil { exercises[index].startedAt = now }
+        exercises[index].pending = WorkoutSet()
+        rest = nil
+        if let target = nextOpenIndex(after: index) { goTo(target) }
     }
 
     mutating func updateSet(_ index: Int, _ setIndex: Int, _ set: WorkoutSet) {

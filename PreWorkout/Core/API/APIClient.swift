@@ -55,12 +55,15 @@ final class APIClient: @unchecked Sendable {
     }
 
     @discardableResult
-    private func raw(_ method: String, _ path: String, body: Data? = nil) async throws -> (Data, HTTPURLResponse) {
+    private func raw(_ method: String, _ path: String, body: Data? = nil, etag: String? = nil) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: try url(path))
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let token = KeychainToken.get() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        if let etag, !etag.isEmpty {
+            request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
         if let body {
             request.httpBody = body
@@ -76,6 +79,7 @@ final class APIClient: @unchecked Sendable {
             let message = (try? decoder.decode(ErrorBody.self, from: data))?.error
             throw message.map { APIError.http(status: 401, message: $0) } ?? APIError.unauthorized
         }
+        if http.statusCode == 304 { return (data, http) }
         guard (200..<300).contains(http.statusCode) else {
             let message = (try? decoder.decode(ErrorBody.self, from: data))?.error
                 ?? "\(method) \(path) failed (\(http.statusCode))"
@@ -101,9 +105,28 @@ final class APIClient: @unchecked Sendable {
         }
     }
 
-    func get<T: Decodable>(_ path: String) async throws -> T {
-        let (data, _) = try await raw("GET", path)
-        return try decode(data)
+    func get<T: Decodable>(_ path: String, cache cacheKey: DiskCache.Key? = nil) async throws -> T {
+        let cached = cacheKey.flatMap { DiskCache.readRaw($0) }
+        do {
+            let (data, http) = try await raw("GET", path, etag: cached?.etag)
+            if http.statusCode == 304, let cached {
+                return try decode(cached.data)
+            }
+            if let cacheKey {
+                DiskCache.writeRaw(cacheKey, etag: http.value(forHTTPHeaderField: "ETag"), data: data)
+            }
+            return try decode(data)
+        } catch {
+            if let cached, isRetryable(error) { return try decode(cached.data) }
+            throw error
+        }
+    }
+
+    /// Network failures can fall back to a cached body; auth errors must not.
+    private func isRetryable(_ error: Error) -> Bool {
+        if case APIError.unauthorized = error { return false }
+        if case APIError.http(let status, _) = error, status == 401 { return false }
+        return true
     }
 
     func send<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B) async throws -> T {

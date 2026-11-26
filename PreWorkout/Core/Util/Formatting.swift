@@ -84,3 +84,27 @@ enum SetFormat {
         return parts.isEmpty ? "–" : parts.joined(separator: " · ")
     }
 }
+
+
+enum SessionFormat {
+    /// "Sesja · 40:00 · 12 prób" for a session/block entry.
+    static func summary(_ item: WorkoutExercise) -> String {
+        let set = item.sets.first
+        var parts = [String(localized: "Sesja"), DurationText.format(set?.durationSeconds ?? 0)]
+        if let n = set?.attempts, n > 0 { parts.append(attempts(n)) }
+        let note = (set?.notes ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = item.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !note.isEmpty { parts.append(note) }
+        else if !fallback.isEmpty { parts.append(fallback) }
+        return parts.joined(separator: " · ")
+    }
+
+    static func attempts(_ n: Int) -> String {
+        let mod10 = n % 10
+        let mod100 = n % 100
+        if n == 1 { return String(localized: "1 próba") }
+        if (12...14).contains(mod100) { return String(localized: "\(n) prób") }
+        if (2...4).contains(mod10) { return String(localized: "\(n) próby") }
+        return String(localized: "\(n) prób")
+    }
+}

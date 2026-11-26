@@ -106,16 +106,33 @@ struct WorkoutEditorView: View {
         let value = exercise.wrappedValue
         let measurement = exercises.byId[value.exerciseId]?.measurement ?? "reps"
         return Section {
-            ForEach(Array(exercise.sets.enumerated()), id: \.element.wrappedValue.id) { item in
-                setRow(item.element, number: item.offset + 1, measurement: measurement, sequence: value.sequence)
-            }
-            .onDelete { offsets in exercise.wrappedValue.sets.remove(atOffsets: offsets) }
+            Toggle("Sesja (blok czasu)", isOn: Binding(
+                get: { exercise.wrappedValue.isSession },
+                set: { on in
+                    exercise.wrappedValue.kind = on ? "session" : "sets"
+                    if on {
+                        if exercise.wrappedValue.sets.isEmpty {
+                            exercise.wrappedValue.sets = [DraftSet(value: WorkoutSet())]
+                        } else if exercise.wrappedValue.sets.count > 1 {
+                            exercise.wrappedValue.sets = [exercise.wrappedValue.sets[0]]
+                        }
+                    }
+                }
+            ))
+            if value.isSession {
+                sessionFields(exercise)
+            } else {
+                ForEach(Array(exercise.sets.enumerated()), id: \.element.wrappedValue.id) { item in
+                    setRow(item.element, number: item.offset + 1, measurement: measurement, sequence: value.sequence)
+                }
+                .onDelete { offsets in exercise.wrappedValue.sets.remove(atOffsets: offsets) }
 
-            Button("Dodaj serię", systemImage: "plus") {
-                let template = exercise.wrappedValue.sets.last?.value ?? WorkoutSet()
-                exercise.wrappedValue.sets.append(DraftSet(value: template))
+                Button("Dodaj serię", systemImage: "plus") {
+                    let template = exercise.wrappedValue.sets.last?.value ?? WorkoutSet()
+                    exercise.wrappedValue.sets.append(DraftSet(value: template))
+                }
+                .disabled(value.sets.count >= 50)
             }
-            .disabled(value.sets.count >= 50)
 
             TextField("Wariant (opcjonalnie)", text: exercise.variant.orEmpty)
             TextField("Notatka do ćwiczenia", text: exercise.notes, axis: .vertical)
@@ -137,6 +154,24 @@ struct WorkoutEditorView: View {
                 }
             }
             .textCase(nil)
+        }
+    }
+
+    private func sessionFields(_ exercise: Binding<DraftExercise>) -> some View {
+        let set = Binding(
+            get: { exercise.wrappedValue.sets.first?.value ?? WorkoutSet() },
+            set: { new in
+                if exercise.wrappedValue.sets.isEmpty {
+                    exercise.wrappedValue.sets = [DraftSet(value: new)]
+                } else {
+                    exercise.wrappedValue.sets[0].value = new
+                }
+            }
+        )
+        return Group {
+            DurationField("Czas", wholeSeconds: set.durationSeconds)
+            IntField("Próby", value: set.attempts)
+            TextField("Notatka (opcjonalnie)", text: set.notes, axis: .vertical)
         }
     }
 

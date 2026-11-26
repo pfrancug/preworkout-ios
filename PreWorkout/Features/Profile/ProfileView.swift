@@ -232,6 +232,16 @@ struct ProfileView: View {
 
     private func load() async {
         let person = appState.activePersonId
+        if state.value == nil, let cached: UserSettings = DiskCache.read("settings", person: person) {
+            form = cached
+            state = .loaded(cached)
+        }
+        if goal == nil, let cached: NutritionGoal = DiskCache.read("goals", person: person) {
+            goal = cached
+        }
+        if weight == nil, let rows: [DiaryRow] = DiskCache.read("diary", person: person) {
+            weight = rows.filter { ($0.weight ?? 0) > 0 }.max { $0.date < $1.date }.map { (String($0.date.prefix(10)), $0.weight ?? 0) }
+        }
         do {
             let settings = try await APIClient.shared.settings(person: person)
             form = settings

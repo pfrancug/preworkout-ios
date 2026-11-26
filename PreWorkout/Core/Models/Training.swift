@@ -185,12 +185,14 @@ struct WorkoutSet: Codable, Hashable {
     var rir: Int?
     var restSeconds: Int?
     var notes: String = ""
+    /// Optional attempt count for a session/block.
+    var attempts: Int? = nil
     /// Per-step reps/duration for a combo; omitted or [] on older payloads.
     var steps: [WorkoutSetStep] = []
 
     private enum CodingKeys: String, CodingKey {
         case isWarmup, reps, holdSeconds, weightKg, distanceM, durationSeconds
-        case assistance, assistanceNote, rpe, rir, restSeconds, notes, steps
+        case assistance, assistanceNote, rpe, rir, restSeconds, notes, attempts, steps
     }
 
     init() {}
@@ -209,6 +211,7 @@ struct WorkoutSet: Codable, Hashable {
         rir = try c.decodeIfPresent(Int.self, forKey: .rir)
         restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        attempts = try c.decodeIfPresent(Int.self, forKey: .attempts)
         steps = try c.decodeIfPresent([WorkoutSetStep].self, forKey: .steps) ?? []
     }
 
@@ -226,6 +229,7 @@ struct WorkoutSet: Codable, Hashable {
         try c.encode(rir, forKey: .rir)
         try c.encode(restSeconds, forKey: .restSeconds)
         try c.encode(notes, forKey: .notes)
+        try c.encodeIfPresent(attempts, forKey: .attempts)
         try c.encode(steps, forKey: .steps)
     }
 
@@ -311,10 +315,13 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
     var groupId: String?
     /// Exercise ids done in order as one set (combo); [] = single exercise
     var sequence: [String] = []
+    /// "sets" (default) or "session" (one timed block).
+    var kind: String = "sets"
     var sets: [WorkoutSet] = []
+    var isSession: Bool { kind == "session" }
 
     private enum CodingKeys: String, CodingKey {
-        case id, exerciseId, planExerciseId, variant, notes, groupId, sequence, sets
+        case id, exerciseId, planExerciseId, variant, notes, groupId, sequence, kind, sets
     }
 
     init(exerciseId: String) { self.exerciseId = exerciseId }
@@ -328,6 +335,7 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
         groupId = try c.decodeIfPresent(String.self, forKey: .groupId)
         sequence = try c.decodeIfPresent([String].self, forKey: .sequence) ?? []
+        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? "sets"
         sets = try c.decodeIfPresent([WorkoutSet].self, forKey: .sets) ?? []
     }
 
@@ -340,6 +348,7 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
         try c.encode(notes, forKey: .notes)
         try c.encode(groupId, forKey: .groupId)
         try c.encode(sequence, forKey: .sequence)
+        try c.encode(kind, forKey: .kind)
         try c.encode(sets, forKey: .sets)
     }
 }

@@ -133,7 +133,11 @@ private struct LiveStartView: View {
     }
 
     private func loadRecent() async {
-        guard let list = try? await APIClient.shared.workouts(person: appState.activePersonId) else { return }
+        let person = appState.activePersonId
+        if recent.isEmpty, let cached: [WorkoutSummary] = DiskCache.read("workouts", person: person) {
+            recent = Array(cached.filter { $0.exerciseCount > 0 }.sorted { $0.date > $1.date }.prefix(3))
+        }
+        guard let list = try? await APIClient.shared.workouts(person: person) else { return }
         recent = Array(list.filter { $0.exerciseCount > 0 }.sorted { $0.date > $1.date }.prefix(3))
     }
 
@@ -148,14 +152,20 @@ private struct LiveStartView: View {
                 var item = we
                 item.id = newId()
                 var e = LiveExercise(item: item, defaultRest: live.defaultRest)
-                e.plannedSets = max(1, we.sets.filter { !$0.isWarmup }.count)
-                if var first = we.sets.first(where: { !$0.isWarmup }) ?? we.sets.first {
-                    first.notes = ""
-                    first.restSeconds = nil
-                    first.isWarmup = false
-                    e.pending = first
+                if we.isSession {
+                    e.plannedSets = 1
+                    e.restSeconds = 0
+                    e.pending = WorkoutSet()
+                } else {
+                    e.plannedSets = max(1, we.sets.filter { !$0.isWarmup }.count)
+                    if var first = we.sets.first(where: { !$0.isWarmup }) ?? we.sets.first {
+                        first.notes = ""
+                        first.restSeconds = nil
+                        first.isWarmup = false
+                        e.pending = first
+                    }
+                    if let rest = we.sets.compactMap(\.restSeconds).first, rest > 0 { e.restSeconds = rest }
                 }
-                if let rest = we.sets.compactMap(\.restSeconds).first, rest > 0 { e.restSeconds = rest }
                 return e
             }
             live.tap()

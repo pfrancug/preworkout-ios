@@ -48,7 +48,15 @@ final class ExerciseStore {
     }
 
     func loadIfNeeded() async {
+        if !loaded, let cached: [Exercise] = DiskCache.read("exercises") {
+            set(cached)
+            loaded = true
+            error = nil
+            Task { await load() }
+            return
+        }
         if !loaded && !isLoading { await load() }
+        else if loaded { Task { await load() } }
     }
 
     func load() async {
