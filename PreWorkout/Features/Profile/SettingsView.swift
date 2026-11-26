@@ -99,19 +99,21 @@ struct SettingsView: View {
     }
 
     private var liveWorkoutSection: some View {
-        Section("Trening na żywo") {
+        Section {
             Picker("Domyślny tryb timera", selection: defaultTimerMode) {
                 ForEach(TimedSetMode.allCases) { mode in
                     Text(verbatim: mode.title).tag(mode)
                 }
             }
+        } header: {
+            Text("Trening na żywo")
         } footer: {
             Text("Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.")
         }
     }
 
     private var appSection: some View {
-        Section("Aplikacja") {
+        Section {
             LabeledContent("Serwer", value: ServerConfig.baseURL?.host() ?? "–")
             LabeledContent("Wersja", value: version)
             if let privacy = URL(string: "https://preworkout.fit/privacy") {
@@ -120,6 +122,8 @@ struct SettingsView: View {
             if let support = URL(string: "https://preworkout.fit/support") {
                 Link("Wsparcie", destination: support)
             }
+        } header: {
+            Text("Aplikacja")
         }
     }
 
