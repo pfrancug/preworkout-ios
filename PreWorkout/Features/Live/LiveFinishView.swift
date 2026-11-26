@@ -30,15 +30,13 @@ struct LiveFinishView: View {
                         .frame(width: 96, height: 96)
                         .background(LiveMood.done.cta, in: Circle())
                         .shadow(color: LV.lime.opacity(0.6), radius: 36)
+                        .padding(.top, 36)
                         .padding(.bottom, 12)
-                    Group {
-                        if stats.sets > 0 {
-                            Text("Świetna robota")
-                        } else {
-                            Text("Jeszcze nic nie zapisano")
-                        }
-                    }
-                    .font(.system(size: 30, weight: .heavy))
+                    Text("Świetna robota")
+                        .font(.system(size: 30, weight: .heavy))
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(2)
                     Text(verbatim: DayString.dayLong(session.date))
                         .foregroundStyle(LV.muted)
                 }
@@ -46,6 +44,7 @@ struct LiveFinishView: View {
                 .padding(.vertical, 12)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
 
             Section {
@@ -123,27 +122,47 @@ struct LiveFinishView: View {
                         Text("Zapisz trening")
                     }
                 }
-                .disabled(saving || done || stats.sets == 0)
+                .disabled(saving || done)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
-            } footer: {
-                if stats.sets == 0 {
-                    Text("Brak zapisanych serii — nie ma czego zapisać.")
-                }
             }
         }
         .scrollContentBackground(.hidden)
+        .scrollClipDisabled()
         .background { LiveAmbient(mood: .done) }
-        .toolbar(.visible, for: .navigationBar)
-        .preferredColorScheme(.dark)
-        .navigationTitle("Zakończ trening")
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Trenuj dalej") { dismiss() }
-                    .disabled(saving || done)
-            }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            keepTrainingBar
         }
+        .toolbar(.hidden, for: .navigationBar)
+        .preferredColorScheme(.dark)
+        .navigationBarBackButtonHidden(true)
+    }
+
+    /// Leading action in the safe area, not the system toolbar: the live
+    /// workout hides the nav bar, and showing it only on this screen left
+    /// "Keep training" misaligned under the status bar.
+    private var keepTrainingBar: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Text("Trenuj dalej")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(LV.text)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(.plain)
+            .disabled(saving || done)
+            .opacity(saving || done ? 0.45 : 1)
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Never force-unwraps: text fields and pickers can still read or write
@@ -166,10 +185,12 @@ struct LiveFinishView: View {
         error = nil
         defer { saving = false }
         do {
-            _ = try await APIClient.shared.createWorkout(session.workoutInput(LiveSession.nowMs), person: appState.activePersonId)
+            let now = LiveSession.nowMs
+            let input = session.workoutInput(now)
+            _ = try await APIClient.shared.createWorkout(input, person: appState.activePersonId)
             Analytics.send("Workout.liveFinished", [
-                "exerciseCount": Analytics.exerciseCountBucket(session.exercises.count),
-                "duration": Analytics.durationBucket(seconds: session.elapsedMs(LiveSession.nowMs) / 1000),
+                "exerciseCount": Analytics.exerciseCountBucket(input.exercises.count),
+                "duration": Analytics.durationBucket(seconds: session.elapsedMs(now) / 1000),
                 "hasSessionType": session.exercises.contains { $0.item.isSession } ? "true" : "false",
             ])
             done = true

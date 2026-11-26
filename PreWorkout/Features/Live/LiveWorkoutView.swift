@@ -1052,8 +1052,22 @@ struct LiveWorkoutView: View {
     }
 
     private func requestFinish() {
-        guard let session = live.session else { return }
-        let clean = session.incomplete.isEmpty
+        guard live.session != nil else { return }
+        // Stop a running set/session timer now, before the sheet-dismiss delay,
+        // and record that set as if the user had tapped stop.
+        let field: LiveSession.TimerField?
+        if let e = live.session?.currentExercise, !e.item.isSession {
+            field = timerField(e)
+        } else {
+            field = nil
+        }
+        let combo = timedStep
+        live.update { s, t in
+            s.commitInProgressForFinish(t, timerField: field, comboStep: combo)
+        }
+        timedKey = nil
+        timedStep = nil
+        let clean = live.session?.incomplete.isEmpty ?? true
         afterSheet { if clean { finishing = true } else { confirmUnfinished = true } }
     }
 }

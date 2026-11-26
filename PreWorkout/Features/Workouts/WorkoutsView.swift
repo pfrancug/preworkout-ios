@@ -159,8 +159,12 @@ struct WorkoutRow: View {
                     .lineLimit(2)
             }
             HStack(spacing: 12) {
-                Label("\(workout.exerciseCount) ćw.", systemImage: "figure.strengthtraining.traditional")
-                Label("\(workout.setCount) serii", systemImage: "number")
+                if workout.exerciseCount > 0 {
+                    Label("\(workout.exerciseCount) ćw.", systemImage: "figure.strengthtraining.traditional")
+                }
+                if workout.setCount > 0 {
+                    Label("\(workout.setCount) serii", systemImage: "number")
+                }
                 if let minutes = workout.durationMin {
                     Label("\(minutes) min", systemImage: "clock")
                 }

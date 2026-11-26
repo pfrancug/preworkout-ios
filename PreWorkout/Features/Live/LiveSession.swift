@@ -483,8 +483,9 @@ struct LiveSession: Codable, Hashable {
     }
 
     /// Logs the pending set of the current exercise. Superset: moves to the next
-    /// member of the round without rest; rest starts after the round.
-    mutating func logSet(_ now: Double) {
+    /// member of the round without rest; rest starts after the round unless
+    /// `startRest` is false (finishing the workout mid-set).
+    mutating func logSet(_ now: Double, startRest: Bool = true) {
         let index = current
         guard let e = currentExercise else { return }
         closeRest(now)
@@ -509,9 +510,13 @@ struct LiveSession: Codable, Hashable {
             }
             current = members.first(where: { exercises[$0].item.sets.count < exercises[$0].plannedSets }) ?? index
         }
-        rest = e.restSeconds > 0
-            ? LiveRest(startedAt: now, durationSec: Double(e.restSeconds), itemId: e.item.id, setIndex: setIndex)
-            : nil
+        if startRest {
+            rest = e.restSeconds > 0
+                ? LiveRest(startedAt: now, durationSec: Double(e.restSeconds), itemId: e.item.id, setIndex: setIndex)
+                : nil
+        } else {
+            rest = nil
+        }
     }
 
     /// If the current exercise is a running session, freeze its elapsed time into pending.
@@ -604,11 +609,62 @@ struct LiveSession: Codable, Hashable {
 
     enum TimerField { case hold, duration }
 
+    /// Stops a running hold, duration, or session timer as if the user tapped
+    /// stop, records that set, marks the exercise done, and ends rest. Used
+    /// when finishing the workout mid-timer.
+    mutating func commitInProgressForFinish(
+        _ now: Double,
+        timerField: TimerField? = nil,
+        comboStep: (index: Int, field: SetField)? = nil
+    ) {
+        guard exercises.indices.contains(current) else {
+            rest = nil
+            setTimer = nil
+            return
+        }
+        let index = current
+        if exercises[index].item.isSession {
+            let elapsed = Double(exercises[index].pending.durationSeconds ?? 0) + (setTimer?.elapsed(now) ?? 0)
+            if elapsed >= 1 {
+                finishSession(index, now)
+            } else {
+                setTimer = nil
+                closeRest(now)
+            }
+            return
+        }
+        if setTimer != nil {
+            if exercises[index].item.sequence.count > 1, let combo = comboStep,
+               exercises[index].pending.steps.indices.contains(combo.index) {
+                let seconds = max(1, (setTimer?.elapsed(now) ?? 0).rounded())
+                var steps = exercises[index].pending.steps
+                combo.field.putStep(seconds, into: &steps[combo.index])
+                exercises[index].pending.steps = steps
+                exercises[index].pending.applySteps(sequence: exercises[index].item.sequence)
+                setTimer = nil
+            } else if let timerField {
+                stopSetTimer(now, field: timerField)
+            } else if exercises[index].pending.holdSeconds != nil {
+                stopSetTimer(now, field: .hold)
+            } else {
+                stopSetTimer(now, field: .duration)
+            }
+            logSet(now, startRest: false)
+            if exercises.indices.contains(index), !exercises[index].item.sets.isEmpty, exercises[index].isOpen {
+                finishExercise(index, now)
+            }
+            return
+        }
+        closeRest(now)
+    }
+
     // MARK: Summary and save
 
     var loggedSetCount: Int { exercises.reduce(0) { $0 + $1.item.sets.count } }
 
-    /// The finished session as a normal workout (exercises without sets dropped).
+    /// The finished session as a normal workout (exercises without sets dropped;
+    /// an empty exercise list is allowed so a session can be saved as a record
+    /// that the user trained).
     func workoutInput(_ now: Double) -> WorkoutInput {
         var closed = self
         closed.closeRest(now)
