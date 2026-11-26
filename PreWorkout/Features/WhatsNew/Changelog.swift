@@ -37,6 +37,18 @@ enum Changelog {
     }
 
     static let entries: [ChangelogEntry] = [
+        ChangelogEntry(version: "0.1.7", date: "2026-11-26", items: [
+            .big("calendar", "Kalendarz ma teraz własną zakładkę: widok miesiąca i tygodnia, aktywności i notatki do dni",
+                 "The calendar has its own tab: month and week views, activities and day notes"),
+            .big("icloud.and.arrow.up", "Bez internetu zapiszesz trening, wagę i profil — zmiany wyślą się, gdy wróci sieć",
+                 "Save a workout, weight and profile without a connection — changes upload when you're back online"),
+            .big("chart.line.uptrend.xyaxis", "Wykres wagi pokazuje zakres wokół Twoich wartości i uśrednia dłuższe okresy, tak jak aplikacja Health",
+                 "The weight chart zooms to your values and averages longer ranges, like the Health app"),
+            .big("heart.text.square", "Synchronizacja wagi z Health pokazuje postęp, a każdy wpis informuje, czy pochodzi z aplikacji, czy z importu",
+                 "Weight sync with Health shows progress, and every entry shows whether it came from the app or from an import"),
+            .small("person.crop.circle", "Profil ma jeden styl i grupy. Kliknij kartę u góry, żeby edytować. Waga, BMI i cel dzienny są w nowej zakładce Ciało",
+                   "A consistent profile: tap the card at the top to edit. Weight, BMI and the daily goal live in a new Body tab"),
+        ]),
         ChangelogEntry(version: "0.1.6", date: "2026-11-26", items: [
             .big("hourglass", "Nowy typ „Sesja”: blok czasu, np. 40 minut handstanda, z licznikiem prób i notatką",
                  "New Session type: a time block, e.g. 40 minutes of handstand, with an attempts counter and a note"),
