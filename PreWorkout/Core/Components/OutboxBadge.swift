@@ -28,6 +28,20 @@ struct OutboxBadge: View {
 
 extension View {
     func outboxBadge() -> some View {
-        safeAreaInset(edge: .bottom, spacing: 0) { OutboxBadge() }
+        modifier(OutboxBadgeInset())
+    }
+}
+
+/// Only insets when something is queued. A permanent empty bottom inset can
+/// confuse TabView and leave the tab bar stuck hidden after heavy navigation.
+private struct OutboxBadgeInset: ViewModifier {
+    private let outbox = Outbox.shared
+
+    func body(content: Content) -> some View {
+        if outbox.pending > 0 {
+            content.safeAreaInset(edge: .bottom, spacing: 0) { OutboxBadge() }
+        } else {
+            content
+        }
     }
 }

@@ -80,6 +80,8 @@ struct WorkoutsView: View {
             .sensoryFeedback(.success, trigger: deleted)
             .onChange(of: live.savedCount) { Task { await load() } }
         }
+        .appNavigationChrome()
+        .keepsTabBarVisible("workouts")
         .task {
             if state.isIdle { await load() }
         }

@@ -99,6 +99,8 @@ struct CalendarView: View {
                 Text(error ?? "")
             }
         }
+        .appNavigationChrome()
+        .keepsTabBarVisible("calendar")
     }
 
     // MARK: Period header + grid

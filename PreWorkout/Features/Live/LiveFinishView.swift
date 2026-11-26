@@ -134,8 +134,10 @@ struct LiveFinishView: View {
             keepTrainingBar
         }
         .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.visible, for: .tabBar)
         .preferredColorScheme(.dark)
         .navigationBarBackButtonHidden(true)
+        .keepsTabBarVisible("liveFinish")
     }
 
     /// Leading action in the safe area, not the system toolbar: the live

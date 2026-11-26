@@ -18,6 +18,7 @@ struct LiveTab: View {
         .toolbarBackground(LV.bg, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
+        .keepsTabBarVisible("live")
     }
 }
 

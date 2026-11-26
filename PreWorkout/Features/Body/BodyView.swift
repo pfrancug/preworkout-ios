@@ -42,6 +42,8 @@ struct BodyView: View {
             .refreshable { await load() }
             .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
         }
+        .appNavigationChrome()
+        .keepsTabBarVisible("body")
     }
 
     private var goalSummary: String {

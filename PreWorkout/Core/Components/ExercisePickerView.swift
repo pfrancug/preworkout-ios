@@ -54,12 +54,15 @@ struct ExercisePickerView<Placement: View>: View {
                     ContentUnavailableView.search(text: query)
                 }
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("Szukaj ćwiczenia"))
+            .modifier(PickerSearch(text: $query, enabled: placing == nil))
             .navigationTitle("Wybierz ćwiczenie")
             .navigationBarTitleDisplayMode(.inline)
+            .appNavigationChrome()
             .navigationDestination(item: $placing) { exercise in
                 if let placement {
                     placement(exercise)
+                        .toolbar(.hidden, for: .navigationBar)
+                        .navigationBarBackButtonHidden(true)
                 }
             }
             .toolbar {
@@ -168,6 +171,25 @@ struct ExerciseRow: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Keep the always-visible search drawer off the placement destination
+/// so its hairline does not overlap that screen during the push.
+private struct PickerSearch: ViewModifier {
+    @Binding var text: String
+    var enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.searchable(
+                text: $text,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: Text("Szukaj ćwiczenia")
+            )
+        } else {
+            content
         }
     }
 }

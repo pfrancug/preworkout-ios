@@ -68,6 +68,7 @@ struct ExercisesView: View {
             .searchable(text: $query, prompt: Text("Nazwa, alias, mięsień…"))
             .refreshable { await store.load() }
             .navigationTitle("Ćwiczenia")
+            .appNavigationChrome()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { filterMenu }
                 ToolbarItem(placement: .topBarLeading) {

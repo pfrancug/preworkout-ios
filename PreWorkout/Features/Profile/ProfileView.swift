@@ -70,6 +70,8 @@ struct ProfileView: View {
             .refreshable { await load() }
             .sensoryFeedback(.selection, trigger: appState.activePersonId)
         }
+        .appNavigationChrome()
+        .keepsTabBarVisible("profile")
         .task {
             if state.isIdle { await load() }
         }

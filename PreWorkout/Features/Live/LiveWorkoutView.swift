@@ -44,6 +44,7 @@ struct LiveWorkoutView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .toolbar(.visible, for: .tabBar)
             .navigationDestination(isPresented: $finishing) { LiveFinishView() }
         }
         .preferredColorScheme(.dark)

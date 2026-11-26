@@ -3,6 +3,8 @@ import TelemetryDeck
 
 /// Anonymous product analytics via TelemetryDeck.
 /// Disabled in Debug and when the App ID is empty. Never send names, emails, or Health/weight values.
+/// TestFlight builds are marked testMode so their signals show only when the
+/// TelemetryDeck dashboard Test Mode toggle is on.
 enum Analytics {
     private static let flag = Flag()
     private static let firstOpenKey = "preworkout.analytics.firstOpenRecorded"
@@ -13,9 +15,15 @@ enum Analytics {
 #else
         let appID = plist("TelemetryDeckAppID")
         guard !appID.isEmpty else { return }
-        var config = TelemetryDeck.Config(appID: appID)
-        // The namespace is stored in Info.plist (`TelemetryDeckNamespace`) for SDK 3,
-        // which requires it. This 2.x SDK has no namespace parameter.
+        // SDK 2.x sends to /v2/ unless a namespace is set. The dashboard app
+        // uses TelemetryDeckNamespace from Info.plist; without it, signals
+        // never appear even with Test Mode on.
+        let namespace = plist("TelemetryDeckNamespace")
+        var config = TelemetryDeck.Config(
+            appID: appID,
+            namespace: namespace.isEmpty ? nil : namespace
+        )
+        // Release TestFlight builds would otherwise be treated as production.
         config.testMode = isTestFlight
         TelemetryDeck.initialize(config: config)
         flag.set()
