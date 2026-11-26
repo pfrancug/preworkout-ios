@@ -295,13 +295,12 @@ struct LiveSession: Codable, Hashable {
         exercises[index].finishedAt = nil
     }
 
-    /// Brings a skipped exercise back and makes it current: set 1 of the plan
-    /// (or the next set when it already has sets), never fewer planned sets.
+    /// Restores a skipped exercise and makes it current, on its first
+    /// unfinished set (set 1 of the plan when nothing was logged). Does
+    /// not add a set — "Jeszcze seria" is only for completed exercises.
     mutating func restoreExercise(_ index: Int) {
         guard exercises.indices.contains(index) else { return }
         reopenExercise(index)
-        let done = exercises[index].item.sets.count
-        if exercises[index].plannedSets <= done { exercises[index].plannedSets = done + 1 }
         exercises[index].plannedSets = max(exercises[index].plannedSets, 1)
         if index != current { setTimer = nil }
         current = index

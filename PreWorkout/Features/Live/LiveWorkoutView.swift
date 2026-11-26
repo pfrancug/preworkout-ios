@@ -669,7 +669,7 @@ struct LiveWorkoutView: View {
                 }
                 HStack(spacing: 10) {
                     if e.status == .skipped {
-                        // Skipped: bring it back where it was (set 1 of N, or the next set).
+                        // Skipped exercises only offer restore, never "one more set".
                         LVPill(action: {
                             live.tap()
                             live.update { s, _ in s.restoreExercise(index) }
