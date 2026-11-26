@@ -5,7 +5,7 @@ import SwiftUI
 struct WeightView: View {
     @Environment(AppState.self) private var appState
     @State private var rows: [DiaryRow] = []
-    @State private var range: WeightRange = .days90
+    @State private var range: WeightRange = .months6
     @State private var editor: WeightEditor?
     @State private var pendingDelete: DiaryRow?
     @State private var error: String?
@@ -181,30 +181,48 @@ struct WeightView: View {
 
     @ViewBuilder
     private var chart: some View {
+        let data = buckets
         if visible.count >= 2 {
+            let showPoints = data.count <= 45
             Chart {
-                ForEach(linePoints) { point in
+                if range.granularity != .day {
+                    ForEach(data) { bucket in
+                        AreaMark(
+                            x: .value(String(localized: "Data"), bucket.date),
+                            yStart: .value(String(localized: "Waga"), bucket.low),
+                            yEnd: .value(String(localized: "Waga"), bucket.high)
+                        )
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(Color.accentColor.opacity(0.15))
+                    }
+                }
+                ForEach(data) { bucket in
                     LineMark(
-                        x: .value(String(localized: "Data"), point.date),
-                        y: .value(String(localized: "Waga"), point.kg)
+                        x: .value(String(localized: "Data"), bucket.date),
+                        y: .value(String(localized: "Waga"), bucket.trend)
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
                     .foregroundStyle(Color.accentColor)
                 }
-                ForEach(plotPoints) { point in
-                    PointMark(
-                        x: .value(String(localized: "Data"), point.date),
-                        y: .value(String(localized: "Waga"), point.kg)
-                    )
-                    .foregroundStyle(by: .value(String(localized: "Źródło"), point.sourceTitle))
-                    .symbol(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                if showPoints {
+                    ForEach(plotPoints(data)) { point in
+                        PointMark(
+                            x: .value(String(localized: "Data"), point.date),
+                            y: .value(String(localized: "Waga"), point.kg)
+                        )
+                        .symbolSize(point.source == .app ? 22 : 16)
+                        .foregroundStyle(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                        .symbol(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                    }
                 }
             }
             .chartForegroundStyleScale([
                 String(localized: "Aplikacja"): Color.accentColor,
                 String(localized: "Health"): Color.pink,
             ])
-            .chartYAxis { AxisMarks(position: .leading) }
+            .chartYScale(domain: yDomain(for: data))
+            .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) }
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) }
             .frame(height: 220)
             .padding(.vertical, 8)
@@ -219,28 +237,50 @@ struct WeightView: View {
         }
     }
 
-    private var linePoints: [WeightChartPoint] {
-        visible.compactMap { row in
-            guard let kg = row.displayWeight, let date = DayString.date(from: String(row.date.prefix(10))) else {
-                return nil
-            }
-            return WeightChartPoint(id: String(row.date.prefix(10)) + "-line", date: date, kg: kg, source: row.hasAppWeight ? .app : .health)
+    /// Daily values for short ranges, weekly averages for ~6 months, monthly averages beyond.
+    private var buckets: [WeightBucket] {
+        let calendar = Calendar.current
+        var groups: [Date: [DiaryRow]] = [:]
+        for row in visible {
+            guard let day = DayString.date(from: String(row.date.prefix(10))) else { continue }
+            groups[range.granularity.bucketStart(for: day, calendar: calendar), default: []].append(row)
         }
+        return groups.compactMap { start, rows -> WeightBucket? in
+            let trends = rows.compactMap(\.displayWeight)
+            guard !trends.isEmpty else { return nil }
+            let all = rows.flatMap { [$0.appWeight, $0.importedWeight].compactMap { $0 } }
+            let apps = rows.compactMap(\.appWeight)
+            let healths = rows.compactMap(\.importedWeight)
+            return WeightBucket(
+                date: start,
+                app: apps.isEmpty ? nil : apps.reduce(0, +) / Double(apps.count),
+                health: healths.isEmpty ? nil : healths.reduce(0, +) / Double(healths.count),
+                trend: trends.reduce(0, +) / Double(trends.count),
+                low: all.min() ?? trends.min() ?? 0,
+                high: all.max() ?? trends.max() ?? 0
+            )
+        }
+        .sorted { $0.date < $1.date }
     }
 
-    private var plotPoints: [WeightChartPoint] {
-        visible.flatMap { row -> [WeightChartPoint] in
-            guard let date = DayString.date(from: String(row.date.prefix(10))) else { return [] }
-            let day = String(row.date.prefix(10))
+    private func plotPoints(_ data: [WeightBucket]) -> [WeightChartPoint] {
+        data.flatMap { bucket -> [WeightChartPoint] in
             var points: [WeightChartPoint] = []
-            if let kg = row.appWeight {
-                points.append(WeightChartPoint(id: day + "-app", date: date, kg: kg, source: .app))
+            if let kg = bucket.app {
+                points.append(WeightChartPoint(id: "\(bucket.date.timeIntervalSince1970)-app", date: bucket.date, kg: kg, source: .app))
             }
-            if let kg = row.importedWeight {
-                points.append(WeightChartPoint(id: day + "-health", date: date, kg: kg, source: .health))
+            if let kg = bucket.health {
+                points.append(WeightChartPoint(id: "\(bucket.date.timeIntervalSince1970)-health", date: bucket.date, kg: kg, source: .health))
             }
             return points
         }
+    }
+
+    /// Fit the axis to the data (like Apple Health) instead of starting at zero.
+    private func yDomain(for data: [WeightBucket]) -> ClosedRange<Double> {
+        guard let low = data.map(\.low).min(), let high = data.map(\.high).max() else { return 0...1 }
+        let pad = max((high - low) * 0.1, 0.5)
+        return floor(low - pad)...ceil(high + pad)
     }
 
     private func load(sync: Bool = false) async {
@@ -413,25 +453,61 @@ private struct WeightSourceBadge: View {
     }
 }
 
+private enum WeightGranularity {
+    case day, week, month
+
+    func bucketStart(for day: Date, calendar: Calendar) -> Date {
+        switch self {
+        case .day:
+            return calendar.startOfDay(for: day)
+        case .week:
+            return calendar.dateInterval(of: .weekOfYear, for: day)?.start ?? calendar.startOfDay(for: day)
+        case .month:
+            return calendar.dateInterval(of: .month, for: day)?.start ?? calendar.startOfDay(for: day)
+        }
+    }
+}
+
+private struct WeightBucket: Identifiable {
+    var id: Date { date }
+    var date: Date
+    var app: Double?
+    var health: Double?
+    /// Average of the preferred value (app, otherwise Health).
+    var trend: Double
+    var low: Double
+    var high: Double
+}
+
 private enum WeightRange: String, CaseIterable, Identifiable {
-    case days30, days90, year, all
+    case week, month, months6, year, all
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .days30: String(localized: "30 dni")
-        case .days90: String(localized: "90 dni")
+        case .week: String(localized: "Tydz.")
+        case .month: String(localized: "Mies.")
+        case .months6: String(localized: "6 mies.")
         case .year: String(localized: "Rok")
         case .all: String(localized: "Wszystko")
+        }
+    }
+
+    var granularity: WeightGranularity {
+        switch self {
+        case .week, .month: .day
+        case .months6: .week
+        case .year, .all: .month
         }
     }
 
     var startDate: Date? {
         let calendar = Calendar.current
         switch self {
-        case .days30: return calendar.date(byAdding: .day, value: -30, to: Date())
-        case .days90: return calendar.date(byAdding: .day, value: -90, to: Date())
+        case .week: return calendar.date(byAdding: .day, value: -7, to: Date())
+        case .month: return calendar.date(byAdding: .month, value: -1, to: Date())
+        case .months6: return calendar.date(byAdding: .month, value: -6, to: Date())
         case .year: return calendar.date(byAdding: .year, value: -1, to: Date())
         case .all: return nil
         }

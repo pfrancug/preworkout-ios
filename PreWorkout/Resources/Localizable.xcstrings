@@ -282,22 +282,12 @@
         }
       }
     },
-    "30 dni": {
+    "6 mies.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "30 days"
-          }
-        }
-      }
-    },
-    "90 dni": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "90 days"
+            "value": "6M"
           }
         }
       }
@@ -1648,6 +1638,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Workout menu"
+          }
+        }
+      }
+    },
+    "Mies.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Month"
           }
         }
       }
@@ -3180,6 +3180,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your time"
+          }
+        }
+      }
+    },
+    "Tydz.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
           }
         }
       }
