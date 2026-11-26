@@ -96,6 +96,7 @@ struct ProfileView: View {
 
     // MARK: Sections
 
+    @ViewBuilder
     private func headerSection(_ original: UserSettings) -> some View {
         let hasPhoto = hasAvatar(original)
         Section {
