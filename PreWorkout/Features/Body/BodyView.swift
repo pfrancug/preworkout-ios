@@ -40,6 +40,7 @@ struct BodyView: View {
             .navigationTitle("Ciało")
             .onAppear { Task { await load() } }
             .refreshable { await load() }
+            .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
         }
     }
 

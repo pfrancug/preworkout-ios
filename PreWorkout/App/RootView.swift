@@ -61,13 +61,16 @@ struct MainTabView: View {
     /// Survives the re-creation on person switch.
     @AppStorage("preworkout.tab") private var tab: Tab = .workouts
     @State private var whatsNew = WhatsNewStore.shared
+    private let outbox = Outbox.shared
 
     var body: some View {
         TabView(selection: $tab) {
             WorkoutsView()
+                .outboxBadge()
                 .tabItem { Label("Treningi", systemImage: "dumbbell") }
                 .tag(Tab.workouts)
             CalendarView()
+                .outboxBadge()
                 .tabItem { Label("Kalendarz", systemImage: "calendar") }
                 .tag(Tab.calendar)
             LiveTab()
@@ -75,14 +78,27 @@ struct MainTabView: View {
                 .badge(live.session != nil ? Text(verbatim: "●") : nil)
                 .tag(Tab.live)
             BodyView()
+                .outboxBadge()
                 .tabItem { Label("Ciało", systemImage: "figure.arms.open") }
                 .tag(Tab.body)
             ProfileView()
+                .outboxBadge()
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
         }
         .sheet(isPresented: $whatsNew.showSheet) {
             WhatsNewSheet(items: whatsNew.highlights)
+        }
+        .alert(
+            "Nie zapisano zmiany",
+            isPresented: Binding(
+                get: { outbox.rejectedMessage != nil },
+                set: { if !$0 { outbox.rejectedMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(outbox.rejectedMessage ?? "")
         }
         .onChange(of: tab) { live.presented = tab == .live }
         .onChange(of: live.savedCount) { tab = .workouts }

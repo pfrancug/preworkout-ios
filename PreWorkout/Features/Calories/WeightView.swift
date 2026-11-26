@@ -133,6 +133,7 @@ struct WeightView: View {
             if !loaded { await load() }
         }
         .refreshable { await load(sync: true) }
+        .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
         .onChange(of: health.lastError) { _, newValue in
             if let newValue { error = newValue }
         }

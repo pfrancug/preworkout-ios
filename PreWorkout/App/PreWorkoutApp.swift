@@ -5,6 +5,7 @@ struct PreWorkoutApp: App {
     @State private var appState = AppState()
     @State private var exercises = ExerciseStore()
     @State private var live = LiveStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -12,7 +13,13 @@ struct PreWorkoutApp: App {
                 .environment(appState)
                 .environment(exercises)
                 .environment(live)
-                .task { await appState.bootstrap() }
+                .task {
+                    Outbox.shared.start()
+                    await appState.bootstrap()
+                }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Outbox.shared.flush() }
         }
     }
 }

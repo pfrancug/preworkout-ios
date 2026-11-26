@@ -15,6 +15,9 @@ EN = {
     "Brak": "None",
     "Brak aliasów": "No aliases",
     "Brak połączenia": "No connection",
+    "Oczekuje na synchronizację: %lld": "Waiting to sync: %lld",
+    "Dotknij, aby spróbować teraz": "Tap to try now",
+    "Nie zapisano zmiany": "A change was not saved",
     "Brak treningów": "No workouts",
     "Brak ćwiczeń": "No exercises",
     "Błąd": "Error",
@@ -473,4 +476,4 @@ PLURALS = {
 }
 
 # Literals that are the same in every language (not translated).
-VERBATIM = {"kg", "%@–%@", "–", "OK", "RPE", "RIR", "PreWorkout", "https://…", "•", "arrow.down.circle", "arrow.up.circle"}
+VERBATIM = {"preworkout.outbox.path", "kg", "%@–%@", "–", "OK", "RPE", "RIR", "PreWorkout", "https://…", "•", "arrow.down.circle", "arrow.up.circle"}

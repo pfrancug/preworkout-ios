@@ -42,6 +42,7 @@ struct WorkoutsView: View {
                     }
                 }
                 .refreshable { await load() }
+                .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
             }
             .navigationTitle("Treningi")
             .toolbar {

@@ -95,7 +95,7 @@ final class APIClient: @unchecked Sendable {
         }
     }
 
-    private func decode<T: Decodable>(_ data: Data) throws -> T {
+    func decode<T: Decodable>(_ data: Data) throws -> T {
         // An empty body is read as JSON `null`, so optional results decode to nil.
         let data = data.isEmpty ? Data("null".utf8) : data
         do {
@@ -127,6 +127,41 @@ final class APIClient: @unchecked Sendable {
         if case APIError.unauthorized = error { return false }
         if case APIError.http(let status, _) = error, status == 401 { return false }
         return true
+    }
+
+    func encodeBody<B: Encodable>(_ body: B) throws -> Data {
+        try encoder.encode(body)
+    }
+
+    /// Sends a write kept in the offline outbox.
+    func replay(_ method: String, _ path: String, body: Data?) async throws {
+        try await raw(method, path, body: body)
+    }
+
+    /// A write that waits in the outbox when the network is down. Returns the response body when it
+    /// was sent, nil when it was queued (the caller then shows the change from the cache).
+    /// A pending write of the same thing is replaced instead of overtaken.
+    func writeOrQueue(
+        _ method: String,
+        _ path: String,
+        body: Data?,
+        kind: OutboxKind,
+        key: String,
+        person: String
+    ) async throws -> Data? {
+        if await Outbox.shared.hasPending(kind: kind, person: person, key: key) {
+            await Outbox.shared.enqueue(kind: kind, person: person, key: key, method: method, path: path, body: body)
+            await Outbox.shared.flush()
+            return nil
+        }
+        do {
+            let (data, _) = try await raw(method, path, body: body)
+            return data
+        } catch {
+            guard OutboxRules.isNetworkError(error) else { throw error }
+            await Outbox.shared.enqueue(kind: kind, person: person, key: key, method: method, path: path, body: body)
+            return nil
+        }
     }
 
     func send<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B) async throws -> T {

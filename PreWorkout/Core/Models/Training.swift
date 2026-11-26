@@ -400,6 +400,17 @@ struct Workout: Decodable, Identifiable, Hashable {
     let exercises: [WorkoutExercise]
 }
 
+extension Workout {
+    /// The workout as it was saved offline (what the server will return for this input).
+    init(_ input: WorkoutInput) {
+        self.init(
+            id: input.id, date: input.date, title: input.title, categoryId: input.categoryId,
+            calendarEntryId: input.calendarEntryId, planDayId: input.planDayId,
+            durationMin: input.durationMin, rpe: input.rpe, notes: input.notes, exercises: input.exercises
+        )
+    }
+}
+
 struct WorkoutSummary: Decodable, Identifiable, Hashable {
     let id: String
     let date: String

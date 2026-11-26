@@ -94,6 +94,7 @@ final class AppState {
                 return
             }
             if let user = session.user { DiskCache.setCurrentUser(user.id) }
+            Outbox.shared.flush()
             account = session.user
             try await loadPeople()
             phase = .ready
@@ -116,6 +117,7 @@ final class AppState {
         KeychainToken.set(response.token)
         api.clearSessionCookies()
         DiskCache.setCurrentUser(response.user.id)
+        Outbox.shared.flush()
         account = response.user
         activePersonId = ""
         categories = []
@@ -165,6 +167,7 @@ final class AppState {
                 UserDefaults.standard.removePersistentDomain(forName: domain)
             }
             LiveStore.deleteAllLocalSessions()
+            Outbox.shared.discardAll()
         }
     }
 

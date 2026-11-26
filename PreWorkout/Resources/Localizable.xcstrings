@@ -1042,6 +1042,16 @@
         }
       }
     },
+    "Dotknij, aby spróbować teraz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to try now"
+          }
+        }
+      }
+    },
     "Dotknij, aby ustawić jako cel dzienny": {
       "localizations": {
         "en": {
@@ -2032,6 +2042,16 @@
         }
       }
     },
+    "Nie zapisano zmiany": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A change was not saved"
+          }
+        }
+      }
+    },
     "Niedokończone ćwiczenia: %lld": {
       "localizations": {
         "en": {
@@ -2191,6 +2211,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Volume kg"
+          }
+        }
+      }
+    },
+    "Oczekuje na synchronizację: %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting to sync: %lld"
           }
         }
       }
@@ -4499,6 +4529,9 @@
           }
         }
       }
+    },
+    "preworkout.outbox.path": {
+      "shouldTranslate": false
     },
     "przerwa %@": {
       "localizations": {

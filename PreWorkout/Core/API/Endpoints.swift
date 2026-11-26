@@ -56,8 +56,15 @@ extension APIClient {
     }
 
     func saveSettings(_ settings: UserSettings, person id: String) async throws {
-        try await sendNoContent("PUT", personPath(id) + "/settings", body: settings)
-        invalidate(["settings"], person: id)
+        let body = try encodeBody(settings)
+        let sent = try await writeOrQueue(
+            "PUT", personPath(id) + "/settings", body: body, kind: .profile, key: "settings", person: id
+        )
+        if sent != nil {
+            invalidate(["settings"], person: id)
+        } else {
+            OptimisticCache.settings(body, person: id)
+        }
     }
 
     func preferences() async throws -> UserPreferences { try await get("/preferences", cache: cacheKey("preferences")) }
@@ -103,20 +110,17 @@ extension APIClient {
         id: Int? = nil,
         person: String
     ) async throws -> DiaryRow {
-        let row: DiaryRow = try await send(
-            "PUT",
-            personPath(person) + "/diary/entries",
-            body: DiaryWeightPatch(
+        try await upsertDiaryPatch(
+            DiaryWeightPatch(
                 id: (id ?? 0) > 0 ? id : nil,
                 date: date,
                 weight: weight,
                 source: .app,
                 includeWeight: true,
                 includeHealthWeight: false
-            )
+            ),
+            person: person
         )
-        invalidate(["diary"], person: person)
-        return row
     }
 
     func upsertDiaryWeights(_ patches: [DiaryWeightPatch], person: String) async throws -> [DiaryRow] {
@@ -131,11 +135,22 @@ extension APIClient {
     }
 
     func upsertDiaryPatch(_ patch: DiaryWeightPatch, person: String) async throws -> DiaryRow {
-        let row: DiaryRow = try await send(
-            "PUT",
-            personPath(person) + "/diary/entries",
-            body: patch
+        let body = try encodeBody(patch)
+        let sent = try await writeOrQueue(
+            "PUT", personPath(person) + "/diary/entries", body: body,
+            kind: .diary, key: "diary:" + patch.date, person: person
         )
+        guard let sent else {
+            OptimisticCache.diary(patch, person: person)
+            return DiaryRow(
+                id: patch.id ?? 0,
+                date: patch.date,
+                weight: patch.weight,
+                source: patch.source ?? .app,
+                healthWeight: patch.healthWeight
+            )
+        }
+        let row: DiaryRow = try decode(sent)
         invalidate(["diary"], person: person)
         return row
     }
@@ -170,19 +185,42 @@ extension APIClient {
     }
 
     func updateCalendarEntry(_ entryId: String, patch: CalendarEntryPatch, person id: String) async throws {
-        try await sendNoContent("PATCH", personPath(id) + "/calendar/entries/\(seg(entryId))", body: patch)
-        invalidate(["calendar-entries"], person: id)
+        let body = try encodeBody(patch)
+        let sent = try await writeOrQueue(
+            "PATCH", personPath(id) + "/calendar/entries/\(seg(entryId))", body: body,
+            kind: .calendarEntry, key: "entry:" + entryId, person: id
+        )
+        if sent != nil {
+            invalidate(["calendar-entries"], person: id)
+        } else {
+            OptimisticCache.calendarEntry(entryId, patch: patch, person: id)
+        }
     }
 
     func deleteCalendarEntry(_ entryId: String, person id: String) async throws {
-        try await sendNoContent("DELETE", personPath(id) + "/calendar/entries/\(seg(entryId))")
-        invalidate(["calendar-entries"], person: id)
+        let sent = try await writeOrQueue(
+            "DELETE", personPath(id) + "/calendar/entries/\(seg(entryId))", body: nil,
+            kind: .calendarEntry, key: "entry:" + entryId, person: id
+        )
+        if sent != nil {
+            invalidate(["calendar-entries"], person: id)
+        } else {
+            OptimisticCache.removeCalendarEntry(entryId, person: id)
+        }
     }
 
     /// An empty note removes the note of that day.
     func saveCalendarNote(date: String, note: String, person id: String) async throws {
-        try await sendNoContent("PUT", personPath(id) + "/calendar/notes/\(seg(date))", body: ["note": note])
-        invalidate(["calendar-notes"], person: id)
+        let body = try encodeBody(["note": note])
+        let sent = try await writeOrQueue(
+            "PUT", personPath(id) + "/calendar/notes/\(seg(date))", body: body,
+            kind: .calendarNote, key: "note:" + date, person: id
+        )
+        if sent != nil {
+            invalidate(["calendar-notes"], person: id)
+        } else {
+            OptimisticCache.calendarNote(date: date, note: note, person: id)
+        }
     }
 
     // MARK: Workouts
@@ -205,7 +243,16 @@ extension APIClient {
     }
 
     func createWorkout(_ input: WorkoutInput, person id: String) async throws -> Workout {
-        let workout: Workout = try await send("POST", personPath(id) + "/workouts", body: input)
+        let body = try encodeBody(input)
+        let sent = try await writeOrQueue(
+            "POST", personPath(id) + "/workouts", body: body,
+            kind: .workout, key: "workout:" + input.id, person: id
+        )
+        guard let sent else {
+            OptimisticCache.workout(input, body: body, person: id)
+            return Workout(input)
+        }
+        let workout: Workout = try decode(sent)
         invalidate(["workouts"], person: id)
         return workout
     }
@@ -217,14 +264,30 @@ extension APIClient {
     }
 
     func updateWorkout(_ workoutId: String, _ input: WorkoutInput, person id: String) async throws -> Workout {
-        let workout: Workout = try await send("PUT", personPath(id) + "/workouts/\(seg(workoutId))", body: input)
+        let body = try encodeBody(input)
+        let sent = try await writeOrQueue(
+            "PUT", personPath(id) + "/workouts/\(seg(workoutId))", body: body,
+            kind: .workout, key: "workout:" + workoutId, person: id
+        )
+        guard let sent else {
+            OptimisticCache.workout(input, body: body, person: id)
+            return Workout(input)
+        }
+        let workout: Workout = try decode(sent)
         invalidate(["workouts", "workout-\(workoutId)"], person: id)
         return workout
     }
 
     func deleteWorkout(_ workoutId: String, person id: String) async throws {
-        try await sendNoContent("DELETE", personPath(id) + "/workouts/\(seg(workoutId))")
-        invalidate(["workouts", "workout-\(workoutId)"], person: id)
+        let sent = try await writeOrQueue(
+            "DELETE", personPath(id) + "/workouts/\(seg(workoutId))", body: nil,
+            kind: .workout, key: "workout:" + workoutId, person: id
+        )
+        if sent != nil {
+            invalidate(["workouts", "workout-\(workoutId)"], person: id)
+        } else {
+            OptimisticCache.removeWorkout(workoutId, person: id)
+        }
     }
 
     // MARK: Exercise library (shared by all people)

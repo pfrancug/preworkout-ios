@@ -66,6 +66,7 @@ struct CalendarView: View {
             }
             .onAppear { Task { await load() } }
             .refreshable { await load() }
+            .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
             .onChange(of: mode) { _, _ in
                 anchor = DayString.date(from: selected) ?? Date()
             }
