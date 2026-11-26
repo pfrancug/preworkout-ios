@@ -9,6 +9,11 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
 
+packages:
+  sentry-cocoa:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: "9.27.0"
+
 settings:
   base:
     MARKETING_VERSION: "0.1.7"
@@ -34,6 +39,8 @@ targets:
     dependencies:
       - target: PreWorkoutLiveActivity
       - sdk: HealthKit.framework
+      - package: sentry-cocoa
+        product: Sentry
     info:
       path: PreWorkout/Info.plist
       properties:
@@ -47,6 +54,7 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false
         APIBaseURL: $(API_BASE_URL)
+        SentryDSN: https://80863e427b529486af2b8ed854df11fd@o197700.ingest.us.sentry.io/4512498932187136
         NSSupportsLiveActivities: true
         NSHealthShareUsageDescription: PreWorkout odczytuje wagę z aplikacji Health, żeby pokazać historię i trzymać ją w zgodzie z dziennikiem.
         NSHealthUpdateUsageDescription: PreWorkout zapisuje wagę do aplikacji Health, gdy dodasz lub zmienisz pomiar w dzienniku.

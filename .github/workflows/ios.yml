@@ -92,13 +92,14 @@ jobs:
       API_BASE_URL: ${{ secrets.API_BASE_URL }}
       DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
       DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v5
 
       - name: Check secrets
         run: |
           missing=0
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 TEAM_ID BUNDLE_ID API_BASE_URL; do
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 TEAM_ID BUNDLE_ID API_BASE_URL SENTRY_AUTH_TOKEN; do
             if [ -z "${!name}" ]; then echo "::error::Missing secret for $name"; missing=1; fi
           done
           exit $missing
@@ -170,6 +171,15 @@ jobs:
             API_BASE_URL="$API_BASE_URL" \
             MARKETING_VERSION="$MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
+
+
+      - name: Upload dSYMs to Sentry
+        env:
+          SENTRY_ORG: piotr-francug
+          SENTRY_PROJECT: preworkout-ios
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+          sentry-cli debug-files upload "$RUNNER_TEMP/PreWorkout.xcarchive"
 
       - name: Export and upload to TestFlight
         run: |
