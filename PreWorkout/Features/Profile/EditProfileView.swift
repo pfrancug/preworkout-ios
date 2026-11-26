@@ -43,16 +43,20 @@ struct EditProfileView: View {
                 Picker("Płeć", selection: $form.sex) {
                     ForEach(["", "male", "female"], id: \.self) { Text(Labels.sex($0)).tag($0) }
                 }
-                LabeledContent("Wiek") {
-                    HStack(spacing: 4) {
-                        TextField("–", text: $form.age)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .onChange(of: form.age) { _, value in
-                                let digits = String(value.filter { $0.isASCII && $0.isNumber }.prefix(3))
-                                if digits != value { form.age = digits }
-                            }
-                        Text("lat").foregroundStyle(.secondary)
+                LabeledContent("Data urodzenia") {
+                    if form.birthDate != nil {
+                        DatePicker("Data urodzenia", selection: birthDateBinding,
+                                   in: BirthDate.pickerRange(), displayedComponents: .date)
+                            .labelsHidden()
+                    } else {
+                        Button("Wybierz datę") {
+                            form.birthDate = BirthDate.iso(from: BirthDate.defaultDate())
+                        }
+                    }
+                }
+                if let age = form.effectiveAge {
+                    LabeledContent("Wiek") {
+                        Text("\(age) lat").foregroundStyle(.secondary)
                     }
                 }
                 LabeledContent("Wzrost") {
@@ -68,7 +72,7 @@ struct EditProfileView: View {
                     }
                 }
             } footer: {
-                Text("Płeć, wiek i wzrost są używane w kalkulatorze kalorii.")
+                Text("Płeć, wiek (z daty urodzenia) i wzrost są używane w kalkulatorze kalorii.")
             }
 
             if let error {
@@ -130,33 +134,43 @@ struct EditProfileView: View {
 
     private var hasChanges: Bool {
         form.name != base.name || form.lastName != base.lastName
-            || form.age != base.age || form.height != base.height || form.sex != base.sex
+            || form.birthDate != base.birthDate || form.height != base.height || form.sex != base.sex
     }
 
+    /// Nothing filled in yet; the age counts via the birth date or a sane legacy age.
     private var isIncompleteProfile: Bool {
-        [base.name, base.lastName, base.age, base.height, base.sex]
-            .allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+        base.effectiveAge == nil
+            && [base.name, base.lastName, base.height, base.sex]
+                .allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    private var birthDateBinding: Binding<Date> {
+        Binding(
+            get: { form.birthDate.flatMap(BirthDate.date(from:)) ?? BirthDate.defaultDate() },
+            set: { form.birthDate = BirthDate.iso(from: $0) }
+        )
     }
 
     private func validated() -> UserSettings? {
-        let age = form.age.trimmingCharacters(in: .whitespaces)
         let height = form.height.trimmingCharacters(in: .whitespaces)
-        if let value = Int(age), !Limits.ageYears.contains(Double(value)) {
-            error = Limits.ageYears.message
+        if let birthDate = form.birthDate, BirthDate.validAge(from: birthDate) == nil {
+            error = String(localized: "Wiek musi mieścić się w przedziale 10–100 lat.")
             return nil
         }
         if let value = Int(height), !Limits.heightCm.contains(Double(value)) {
             error = Limits.heightCm.message
             return nil
         }
-        if (!age.isEmpty && Int(age) == nil) || (!height.isEmpty && Int(height) == nil) {
-            error = String(localized: "Wiek i wzrost muszą być liczbami.")
+        if !height.isEmpty && Int(height) == nil {
+            error = String(localized: "Wzrost musi być liczbą.")
             return nil
         }
         var body = form
         body.name = form.name.trimmingCharacters(in: .whitespaces).capped(Limits.titleLength)
         body.lastName = form.lastName.trimmingCharacters(in: .whitespaces).capped(Limits.titleLength)
-        body.age = age
+        // The server computes the age from the birth date; older builds read `age`.
+        body.age = form.birthDate.flatMap { BirthDate.validAge(from: $0) }.map(String.init)
+            ?? BirthDate.legacyAge(form.age).map(String.init) ?? ""
         body.height = height
         return body
     }

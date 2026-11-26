@@ -160,7 +160,13 @@ struct CalculatorView: View {
             }
             .pickerStyle(.segmented)
             .listRowSeparator(.hidden)
-            IntField("Wiek", value: $data.age, unit: String(localized: "lat"), limit: Limits.ageYears)
+            if let birthDate = profile?.birthDate, let age = BirthDate.validAge(from: birthDate) {
+                LabeledContent("Wiek") {
+                    Text("\(age) lat").foregroundStyle(.secondary)
+                }
+            } else {
+                IntField("Wiek", value: $data.age, unit: String(localized: "lat"), limit: Limits.ageYears)
+            }
             DecimalField("Wzrost", value: $data.height, unit: "cm", limit: Limits.heightCm)
             DecimalField("Waga", value: $data.weight, unit: "kg", limit: Limits.bodyWeightKg)
             Picker("Poziom aktywności", selection: $data.activity) {
@@ -512,7 +518,8 @@ struct CalculatorView: View {
             ?? DiskCache.read("settings", person: person)
             ?? UserSettings(name: "", age: "", height: "", sex: "")
         if let male = data.male { settings.sex = male ? "male" : "female" }
-        if let age = data.age, Limits.ageYears.contains(Double(age)) { settings.age = String(age) }
+        // With a birth date the server computes the age; the field is read-only then.
+        if settings.birthDate == nil, let age = data.age, Limits.ageYears.contains(Double(age)) { settings.age = String(age) }
         if let height = data.height, Limits.heightCm.contains(height) {
             settings.height = height == height.rounded() ? String(height.safeInt) : String(format: "%.2f", height)
         }

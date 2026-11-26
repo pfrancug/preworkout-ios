@@ -802,6 +802,16 @@
         }
       }
     },
+    "Data urodzenia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date of birth"
+          }
+        }
+      }
+    },
     "Do 30 aliasów, każdy do 80 znaków.": {
       "localizations": {
         "en": {
@@ -2778,12 +2788,12 @@
         }
       }
     },
-    "Płeć, wiek i wzrost są używane w kalkulatorze kalorii.": {
+    "Płeć, wiek (z daty urodzenia) i wzrost są używane w kalkulatorze kalorii.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sex, age and height are used by the calorie calculator."
+            "value": "Sex, age (from your date of birth) and height are used by the calorie calculator."
           }
         }
       }
@@ -3764,12 +3774,12 @@
         }
       }
     },
-    "Wiek i wzrost muszą być liczbami.": {
+    "Wiek musi mieścić się w przedziale 10–100 lat.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Age and height must be numbers."
+            "value": "Age must be between 10 and 100 years."
           }
         }
       }
@@ -3924,6 +3934,16 @@
         }
       }
     },
+    "Wybierz datę": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a date"
+          }
+        }
+      }
+    },
     "Wybierz plan kaloryczny": {
       "localizations": {
         "en": {
@@ -4070,6 +4090,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Height"
+          }
+        }
+      }
+    },
+    "Wzrost musi być liczbą.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Height must be a number."
           }
         }
       }

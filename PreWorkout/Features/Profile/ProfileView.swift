@@ -125,7 +125,7 @@ enum ProfileSummary {
     static func text(_ s: UserSettings) -> String? {
         var parts: [String] = []
         if s.sex == "male" || s.sex == "female" { parts.append(String(localized: Labels.sex(s.sex))) }
-        if let age = Int(s.age), age > 0 { parts.append(String(localized: "\(age) lat")) }
+        if let age = s.effectiveAge { parts.append(String(localized: "\(age) lat")) }
         if let height = Int(s.height), height > 0 { parts.append("\(height) cm") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
