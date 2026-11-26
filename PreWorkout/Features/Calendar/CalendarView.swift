@@ -486,6 +486,7 @@ struct CalendarView: View {
                     )
                 }
                 _ = try await APIClient.shared.createCalendarEntry(date: draft.date, entry: input, person: person)
+                Analytics.send("Calendar.activityAdded")
             }
             entries = try await APIClient.shared.calendarEntries(person: person)
             rebuild()
@@ -513,6 +514,9 @@ struct CalendarView: View {
         do {
             try await APIClient.shared.saveCalendarNote(date: day, note: trimmed, person: person)
             notes[day] = trimmed.isEmpty ? nil : trimmed
+            if !trimmed.isEmpty {
+                Analytics.send("Calendar.noteAdded")
+            }
         } catch {
             self.error = error.localizedDescription
         }

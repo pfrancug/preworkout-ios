@@ -4,6 +4,7 @@ import SwiftUI
 struct PreWorkoutApp: App {
     init() {
         SentryBootstrap.start()
+        Analytics.start()
     }
 
     @State private var appState = AppState()

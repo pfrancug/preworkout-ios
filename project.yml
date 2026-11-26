@@ -13,6 +13,9 @@ packages:
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa
     from: "9.27.0"
+  TelemetryDeck:
+    url: https://github.com/TelemetryDeck/SwiftSDK
+    from: "2.14.2"
 
 settings:
   base:
@@ -41,6 +44,8 @@ targets:
       - sdk: HealthKit.framework
       - package: sentry-cocoa
         product: Sentry
+      - package: TelemetryDeck
+        product: TelemetryDeck
     info:
       path: PreWorkout/Info.plist
       properties:
@@ -55,6 +60,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         APIBaseURL: $(API_BASE_URL)
         SentryDSN: https://80863e427b529486af2b8ed854df11fd@o197700.ingest.us.sentry.io/4512498932187136
+        TelemetryDeckAppID: 12CA1782-5485-4ACC-835B-DC410468BA9F
+        TelemetryDeckNamespace: com.hotcode
         NSSupportsLiveActivities: true
         NSHealthShareUsageDescription: PreWorkout odczytuje wagę z aplikacji Health, żeby pokazać historię i trzymać ją w zgodzie z dziennikiem.
         NSHealthUpdateUsageDescription: PreWorkout zapisuje wagę do aplikacji Health, gdy dodasz lub zmienisz pomiar w dzienniku.

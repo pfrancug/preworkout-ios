@@ -100,7 +100,10 @@ struct MainTabView: View {
         } message: {
             Text(outbox.rejectedMessage ?? "")
         }
-        .onChange(of: tab) { live.presented = tab == .live }
+        .onChange(of: tab) { _, newTab in
+            live.presented = newTab == .live
+            Analytics.send("Tab.switched", ["tab": newTab.rawValue])
+        }
         .onChange(of: live.savedCount) { tab = .workouts }
         .task {
             whatsNew.checkOnLaunch()

@@ -24,7 +24,10 @@ struct WhatsNewView: View {
         }
         .navigationTitle("Co nowego")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { store.markSeen() }
+        .onAppear {
+            store.markSeen()
+            Analytics.send("WhatsNew.viewed")
+        }
     }
 }
 
@@ -87,5 +90,6 @@ struct WhatsNewSheet: View {
         }
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
+        .onAppear { Analytics.send("WhatsNew.viewed") }
     }
 }

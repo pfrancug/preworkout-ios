@@ -220,6 +220,7 @@ struct WorkoutEditorView: View {
                 workout = try await APIClient.shared.createWorkout(draft.input(id: createId), person: person)
             }
             saved += 1
+            Analytics.send(workoutId == nil ? "Workout.created" : "Workout.edited")
             onSaved(workout)
             dismiss()
         } catch {

@@ -77,6 +77,7 @@ final class LiveStore {
         fresh.title = title
         session = fresh
         afterChange()
+        Analytics.send("Workout.liveStarted")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 

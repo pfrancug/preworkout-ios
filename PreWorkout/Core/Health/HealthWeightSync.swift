@@ -64,6 +64,7 @@ final class HealthWeightSync {
         busy = true
         lastError = nil
         progress = HealthSyncProgress(phase: .reading, done: 0, total: 0)
+        Analytics.send("HealthSync.started")
         defer { busy = false }
         do {
             let samples = try await loadSamples()
@@ -82,6 +83,7 @@ final class HealthWeightSync {
                 done: finishedTotal,
                 total: finishedTotal
             )
+            Analytics.send("HealthSync.finished", ["count": Analytics.countBucket(finishedTotal)])
             return updated
         } catch {
             lastError = error.localizedDescription

@@ -323,6 +323,9 @@ struct WeightView: View {
         let person = appState.activePersonId
         do {
             let saved = try await APIClient.shared.upsertDiaryWeight(date: day, weight: weight, id: id, person: person)
+            if id == nil {
+                Analytics.send("Weight.entryAdded")
+            }
             rows = try await APIClient.shared.diary(person: person)
             await health.write(saved, person: person)
         } catch {

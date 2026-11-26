@@ -149,7 +149,10 @@ struct EditProfileView: View {
         error = nil
         defer { saving = false }
         do {
+            let wasIncomplete = [base.name, base.lastName, base.age, base.height, base.sex]
+                .allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty }
             try await APIClient.shared.saveSettings(body, person: appState.activePersonId)
+            Analytics.send(wasIncomplete ? "Profile.completed" : "Profile.edited")
             base = body
             form = body
             saved += 1

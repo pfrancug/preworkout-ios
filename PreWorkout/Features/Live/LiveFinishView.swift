@@ -165,6 +165,11 @@ struct LiveFinishView: View {
         defer { saving = false }
         do {
             _ = try await APIClient.shared.createWorkout(session.workoutInput(LiveSession.nowMs), person: appState.activePersonId)
+            Analytics.send("Workout.liveFinished", [
+                "exerciseCount": Analytics.exerciseCountBucket(session.exercises.count),
+                "duration": Analytics.durationBucket(seconds: session.elapsedMs(LiveSession.nowMs) / 1000),
+                "hasSessionType": session.exercises.contains { $0.item.isSession } ? "true" : "false",
+            ])
             done = true
             live.success()
             live.didSave(sessionId: session.id)

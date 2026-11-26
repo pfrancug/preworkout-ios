@@ -124,6 +124,7 @@ final class AppState {
         categoriesPersonId = nil
         try await loadPeople()
         phase = .ready
+        Analytics.send("SignIn.completed")
     }
 
     func linkApple(_ payload: AppleCredentialPayload) async throws {
