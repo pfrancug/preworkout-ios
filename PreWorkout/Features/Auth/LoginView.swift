@@ -5,8 +5,6 @@ struct LoginView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @State private var server = ServerConfig.baseURL?.absoluteString ?? ""
-    @State private var password = ""
-    @State private var showPasswordLogin = false
     @State private var pendingNonce: String?
     @State private var busy = false
     @State private var error: String?
@@ -37,38 +35,6 @@ struct LoginView: View {
                 } footer: {
                     if let error {
                         Text(error).foregroundStyle(.red)
-                    }
-                }
-
-                if appState.passwordLoginAvailable {
-                    Section {
-                        DisclosureGroup("Logowanie hasłem", isExpanded: $showPasswordLogin) {
-                            SecureField("Hasło", text: $password)
-                                .textContentType(.password)
-                                .submitLabel(.go)
-                                .onSubmit(signInWithPassword)
-
-                            if ServerConfig.bundledURL != nil {
-                                LabeledContent("Serwer") {
-                                    TextField("https://…", text: $server)
-                                        .keyboardType(.URL)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-
-                            Button(action: signInWithPassword) {
-                                HStack {
-                                    Spacer()
-                                    if busy { ProgressView() } else { Text("Zaloguj").bold() }
-                                    Spacer()
-                                }
-                            }
-                            .disabled(busy || password.isEmpty)
-                        }
-                    } footer: {
-                        Text("Tymczasowe logowanie dla dotychczasowego konta przed powiązaniem z Apple ID.")
                     }
                 }
             }
@@ -130,20 +96,6 @@ struct LoginView: View {
                 } catch {
                     self.error = error.localizedDescription
                 }
-            }
-        }
-    }
-
-    private func signInWithPassword() {
-        guard !password.isEmpty, applyServerURL() else { return }
-        busy = true
-        error = nil
-        Task {
-            defer { busy = false }
-            do {
-                try await appState.login(password: password)
-            } catch {
-                self.error = error.localizedDescription
             }
         }
     }

@@ -1072,16 +1072,6 @@
         }
       }
     },
-    "Hasło": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password"
-          }
-        }
-      }
-    },
     "Historia celu": {
       "localizations": {
         "en": {
@@ -1378,16 +1368,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exercise list"
-          }
-        }
-      }
-    },
-    "Logowanie hasłem": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Password sign-in"
           }
         }
       }
@@ -2065,6 +2045,16 @@
         }
       }
     },
+    "Powiąż konto z Apple ID, aby logować się przez Apple.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link this account with your Apple ID to sign in with Apple."
+          }
+        }
+      }
+    },
     "Powiąż z Apple": {
       "localizations": {
         "en": {
@@ -2614,16 +2604,6 @@
         }
       }
     },
-    "To konto używa tymczasowego hasła. Powiąż je z Apple ID, aby logować się przez Apple.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This account uses the temporary password. Link it with your Apple ID to sign in with Apple."
-          }
-        }
-      }
-    },
     "Trening": {
       "localizations": {
         "en": {
@@ -2750,16 +2730,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom only"
-          }
-        }
-      }
-    },
-    "Tymczasowe logowanie dla dotychczasowego konta przed powiązaniem z Apple ID.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporary sign-in for the existing account before linking an Apple ID."
           }
         }
       }
@@ -3440,16 +3410,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finish workout"
-          }
-        }
-      }
-    },
-    "Zaloguj": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in"
           }
         }
       }

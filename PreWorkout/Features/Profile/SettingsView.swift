@@ -43,7 +43,7 @@ struct SettingsView: View {
                     if linkedFeedback {
                         Text("Powiązano konto z Apple ID.")
                     } else if !account.appleLinked {
-                        Text("To konto używa tymczasowego hasła. Powiąż je z Apple ID, aby logować się przez Apple.")
+                        Text("Powiąż konto z Apple ID, aby logować się przez Apple.")
                     }
                 }
             }

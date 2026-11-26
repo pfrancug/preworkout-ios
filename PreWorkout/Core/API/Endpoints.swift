@@ -7,10 +7,6 @@ extension APIClient {
     func health() async throws -> Health { try await get("/health") }
     func authSession() async throws -> AuthSession { try await get("/auth/session") }
 
-    func login(password: String) async throws {
-        try await sendNoContent("POST", "/auth/login", body: ["password": password])
-    }
-
     func logout() async throws { try await sendNoContent("POST", "/auth/logout") }
 
     func appleNative(

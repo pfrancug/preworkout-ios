@@ -14,7 +14,6 @@ final class AppState {
 
     private(set) var phase: Phase = .checking
     private(set) var account: Account?
-    private(set) var passwordLoginAvailable = true
     private(set) var people: [Person] = []
     /// AI endpoints are only available when the server says so (`GET /api/health`).
     private(set) var aiEnabled = false
@@ -60,7 +59,6 @@ final class AppState {
             let health = try await api.health()
             aiEnabled = health.ai
             let session = try await api.authSession()
-            passwordLoginAvailable = session.methods?.password ?? true
             if session.required && !session.authenticated {
                 KeychainToken.clear()
                 account = nil
@@ -105,18 +103,6 @@ final class AppState {
         api.clearSessionCookies()
         account = response.user
         try? await loadPeople()
-    }
-
-    func login(password: String) async throws {
-        try await api.login(password: password)
-        let session = try await api.authSession()
-        account = session.user
-        passwordLoginAvailable = session.methods?.password ?? true
-        activePersonId = ""
-        categories = []
-        categoriesPersonId = nil
-        try await loadPeople()
-        phase = .ready
     }
 
     func logout() async {
