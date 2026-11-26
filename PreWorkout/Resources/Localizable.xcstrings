@@ -432,6 +432,16 @@
         }
       }
     },
+    "Biblioteka, superserie, combo i bloki na czas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A library, supersets, combos and timed blocks"
+          }
+        }
+      }
+    },
     "Brak": {
       "localizations": {
         "en": {
@@ -1332,12 +1342,32 @@
         }
       }
     },
+    "Kalkulator, cel dzienny i historia, która idzie za Tobą": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calculator, daily goal and a history that follows you"
+          }
+        }
+      }
+    },
     "Kalorie": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Calories"
+          }
+        }
+      }
+    },
+    "Kalorie i waga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calories and weight"
           }
         }
       }
@@ -1468,6 +1498,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exercise list"
+          }
+        }
+      }
+    },
+    "Logowanie tylko przez Apple. Twoje treningi zostają na Twoim koncie.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with Apple only. Your workouts stay on your account."
           }
         }
       }
@@ -2814,6 +2854,16 @@
         }
       }
     },
+    "Timer, przerwa i zapis serii bez odrywania się od ćwiczenia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A timer, rest and set logging without leaving the exercise"
+          }
+        }
+      }
+    },
     "To Apple ID jest już używane przez inne konto.": {
       "localizations": {
         "en": {
@@ -2850,6 +2900,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Live workout"
+          }
+        }
+      }
+    },
+    "Trening na żywo. Postępy w jednym miejscu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live workouts. Progress in one place."
           }
         }
       }
@@ -4036,6 +4096,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exercises you added"
+          }
+        }
+      }
+    },
+    "Ćwiczenia i sesje": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercises and sessions"
           }
         }
       }

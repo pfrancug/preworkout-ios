@@ -10,36 +10,116 @@ struct LoginView: View {
     @State private var error: String?
 
     var body: some View {
-        NavigationStack {
-            Form {
+        ZStack {
+            background
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+                brand
+                features
+                    .padding(.top, 36)
+                Spacer(minLength: 24)
                 if ServerConfig.bundledURL == nil {
-                    Section("Serwer") {
-                        TextField("https://…", text: $server)
-                            .keyboardType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
+                    serverField
+                        .padding(.bottom, 16)
                 }
-
-                Section {
-                    SignInWithAppleButton(.signIn) { request in
-                        configureAppleRequest(request)
-                    } onCompletion: { result in
-                        handleAppleResult(result)
-                    }
-                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                    .frame(height: 50)
-                    .disabled(busy)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                } footer: {
-                    if let error {
-                        Text(error).foregroundStyle(.red)
-                    }
+                appleButton
+                if let error {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 10)
                 }
+                Text("Logowanie tylko przez Apple. Twoje treningi zostają na Twoim koncie.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
             }
-            .navigationTitle("PreWorkout")
+            .padding(.horizontal, 28)
+            .padding(.bottom, 12)
         }
+        .overlay {
+            if busy { ProgressView().controlSize(.large) }
+        }
+        .disabled(busy)
+    }
+
+    private var background: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.07, green: 0.08, blue: 0.10),
+                Color(red: 0.10, green: 0.12, blue: 0.09),
+                Color(red: 0.06, green: 0.07, blue: 0.08),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+
+    private var brand: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color(red: 0.72, green: 0.93, blue: 0.22).opacity(0.16))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundStyle(Color(red: 0.72, green: 0.93, blue: 0.22))
+            }
+            Text("PreWorkout")
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+            Text("Trening na żywo. Postępy w jednym miejscu.")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.white.opacity(0.72))
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var features: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            feature("timer", String(localized: "Trening na żywo"), String(localized: "Timer, przerwa i zapis serii bez odrywania się od ćwiczenia"))
+            feature("square.stack.3d.up", String(localized: "Ćwiczenia i sesje"), String(localized: "Biblioteka, superserie, combo i bloki na czas"))
+            feature("chart.line.uptrend.xyaxis", String(localized: "Kalorie i waga"), String(localized: "Kalkulator, cel dzienny i historia, która idzie za Tobą"))
+        }
+    }
+
+    private func feature(_ icon: String, _ title: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color(red: 0.72, green: 0.93, blue: 0.22))
+                .frame(width: 36, height: 36)
+                .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                Text(detail).font(.system(size: 14)).foregroundStyle(.white.opacity(0.62))
+            }
+        }
+    }
+
+    private var serverField: some View {
+        TextField("https://…", text: $server)
+            .keyboardType(.URL)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .foregroundStyle(.white)
+            .padding(12)
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var appleButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            configureAppleRequest(request)
+        } onCompletion: { result in
+            handleAppleResult(result)
+        }
+        .signInWithAppleButtonStyle(.white)
+        .frame(height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func applyServerURL() -> Bool {

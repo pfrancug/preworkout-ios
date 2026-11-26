@@ -58,6 +58,8 @@ enum Changelog {
                    "The app opens instantly from data on the phone and refreshes in the background only when something has changed"),
             .small("person.text.rectangle", "Opcjonalne nazwisko w profilu, a poziom aktywności i dane z kalkulatora zapisują się na koncie",
                    "Optional last name in your profile, and the activity level and calculator data are saved to your account"),
+            .small("person.badge.key", "Nowy, czytelniejszy ekran logowania, od razu widać, co aplikacja daje",
+                   "A clearer sign-in screen that shows what the app is for"),
             .small("sparkles", "Nowy ekran „Co nowego” w Profilu",
                    "New What's new screen in Profile"),
         ]),
