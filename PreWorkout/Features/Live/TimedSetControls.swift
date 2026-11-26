@@ -145,7 +145,12 @@ struct TimedSetHero: View {
         let timer = running
         let goal = timer?.countsDown == true ? timer?.targetSec : (field == .hold ? holdGoal : nil)
         let elapsed = timer?.elapsed(now) ?? 0
-        let display = timer?.displaySeconds(now) ?? (timedJustFinished ? recorded : (mode == .countdown ? targetDraft : (recorded ?? goal ?? 0)))
+        let display: Double = {
+            if let timer { return timer.displaySeconds(now) }
+            if timedJustFinished { return recorded }
+            if mode == .countdown { return targetDraft }
+            return recorded > 0 ? recorded : (goal ?? 0)
+        }()
         let overtime = timer?.isOvertime(now) == true
         let reached = timer != nil && !overtime && goal.map { elapsed >= $0 } == true
         let progress: Double = {

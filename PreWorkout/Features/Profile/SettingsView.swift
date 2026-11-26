@@ -13,8 +13,7 @@ struct SettingsView: View {
     @State private var appleRunner = AppleSignInRunner()
 
     var body: some View {
-        @Bindable var store = live
-        return Form {
+        Form {
             if let account = appState.account {
                 Section {
                     if let email = account.email, !email.isEmpty {
@@ -70,7 +69,7 @@ struct SettingsView: View {
             }
 
             Section("Trening na żywo") {
-                Picker("Domyślny tryb timera", selection: $store.defaultTimerMode) {
+                Picker("Domyślny tryb timera", selection: defaultTimerMode) {
                     ForEach(TimedSetMode.allCases) { mode in
                         Text(verbatim: mode.title).tag(mode)
                     }
@@ -157,6 +156,13 @@ struct SettingsView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private var defaultTimerMode: Binding<TimedSetMode> {
+        Binding(
+            get: { live.defaultTimerMode },
+            set: { live.defaultTimerMode = $0 }
+        )
     }
 
     private var currentLanguage: String {
