@@ -408,6 +408,8 @@ EN = {
     "Waga jest synchronizowana z aplikacją Health w obie strony. Dane z Health nie są nikomu udostępniane i nie służą do reklam.": "Weight stays in sync with the Health app both ways. Health data is not shared with anyone and is not used for ads.",
     "Brak pomiarów wagi": "No weight entries yet",
     "Pomiary": "Entries",
+    "Pokaż więcej": "Show more",
+    "Średnia": "Average",
     "Dodaj wagę": "Add weight",
     "Edytuj wagę": "Edit weight",
     "Usunąć ten pomiar?": "Delete this entry?",

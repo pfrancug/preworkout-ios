@@ -2415,6 +2415,16 @@
         }
       }
     },
+    "Pokaż więcej": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show more"
+          }
+        }
+      }
+    },
     "Pokaż zarchiwizowane": {
       "localizations": {
         "en": {
@@ -4761,6 +4771,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Easier"
+          }
+        }
+      }
+    },
+    "Średnia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Average"
           }
         }
       }

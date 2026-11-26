@@ -11,6 +11,7 @@ struct WeightView: View {
     @State private var error: String?
     @State private var health = HealthWeightSync()
     @State private var loaded = false
+    @State private var visibleEntryCount = 10
 
     private var weighIns: [DiaryRow] {
         rows.filter(\.hasAnyWeight)
@@ -63,7 +64,7 @@ struct WeightView: View {
                     Text("Brak pomiarów wagi")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(weighIns.reversed()) { row in
+                    ForEach(Array(weighIns.reversed().prefix(visibleEntryCount))) { row in
                         Button {
                             editor = WeightEditor(row: row)
                         } label: {
@@ -74,6 +75,11 @@ struct WeightView: View {
                             Button("Usuń", systemImage: "trash", role: .destructive) {
                                 pendingDelete = row
                             }
+                        }
+                    }
+                    if weighIns.count > visibleEntryCount {
+                        Button("Pokaż więcej") {
+                            visibleEntryCount += 20
                         }
                     }
                 }
@@ -183,51 +189,7 @@ struct WeightView: View {
     @ViewBuilder
     private var chart: some View {
         let data = buckets
-        if visible.count >= 2 {
-            let showPoints = data.count <= 45
-            Chart {
-                if range.granularity != .day {
-                    ForEach(data) { bucket in
-                        AreaMark(
-                            x: .value(String(localized: "Data"), bucket.date),
-                            yStart: .value(String(localized: "Waga"), bucket.low),
-                            yEnd: .value(String(localized: "Waga"), bucket.high)
-                        )
-                        .interpolationMethod(.monotone)
-                        .foregroundStyle(Color.accentColor.opacity(0.15))
-                    }
-                }
-                ForEach(data) { bucket in
-                    LineMark(
-                        x: .value(String(localized: "Data"), bucket.date),
-                        y: .value(String(localized: "Waga"), bucket.trend)
-                    )
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                    .foregroundStyle(Color.accentColor)
-                }
-                if showPoints {
-                    ForEach(plotPoints(data)) { point in
-                        PointMark(
-                            x: .value(String(localized: "Data"), point.date),
-                            y: .value(String(localized: "Waga"), point.kg)
-                        )
-                        .symbolSize(point.source == .app ? 22 : 16)
-                        .foregroundStyle(by: .value(String(localized: "Źródło"), point.sourceTitle))
-                        .symbol(by: .value(String(localized: "Źródło"), point.sourceTitle))
-                    }
-                }
-            }
-            .chartForegroundStyleScale([
-                String(localized: "Aplikacja"): Color.accentColor,
-                String(localized: "Health"): Color.pink,
-            ])
-            .chartYScale(domain: yDomain(for: data))
-            .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) }
-            .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) }
-            .frame(height: 220)
-            .padding(.vertical, 8)
-        } else {
+        if data.isEmpty {
             ContentUnavailableView {
                 Label("Za mało pomiarów do wykresu", systemImage: "chart.line.uptrend.xyaxis")
             } description: {
@@ -235,6 +197,67 @@ struct WeightView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+        } else {
+            let showPoints = data.count < 2 || data.count <= 45
+            let summary = chartSummary(data)
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(summary.label)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(verbatim: "\(summary.kg.short()) kg")
+                        .font(.title2.weight(.semibold))
+                        .monospacedDigit()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+
+                Chart {
+                    if range.granularity != .day, data.count >= 2 {
+                        ForEach(data) { bucket in
+                            AreaMark(
+                                x: .value(String(localized: "Data"), bucket.date),
+                                yStart: .value(String(localized: "Waga"), bucket.low),
+                                yEnd: .value(String(localized: "Waga"), bucket.high)
+                            )
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(Color.accentColor.opacity(0.15))
+                        }
+                    }
+                    if data.count >= 2 {
+                        ForEach(data) { bucket in
+                            LineMark(
+                                x: .value(String(localized: "Data"), bucket.date),
+                                y: .value(String(localized: "Waga"), bucket.trend)
+                            )
+                            .interpolationMethod(.monotone)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    if showPoints {
+                        ForEach(plotPoints(data)) { point in
+                            PointMark(
+                                x: .value(String(localized: "Data"), point.date),
+                                y: .value(String(localized: "Waga"), point.kg)
+                            )
+                            .symbolSize(point.source == .app ? 22 : 16)
+                            .foregroundStyle(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                            .symbol(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                        }
+                    }
+                }
+                .chartForegroundStyleScale([
+                    String(localized: "Aplikacja"): Color.accentColor,
+                    String(localized: "Health"): Color.pink,
+                ])
+                .chartYScale(domain: yDomain(for: data))
+                .chartXScale(domain: xDomain)
+                .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) }
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) }
+                .frame(height: 220)
+                .padding(.vertical, 8)
+            }
         }
     }
 
@@ -278,10 +301,37 @@ struct WeightView: View {
     }
 
     /// Fit the axis to the data (like Apple Health) instead of starting at zero.
+    /// A single value still gets padding so the point is not glued to both edges.
     private func yDomain(for data: [WeightBucket]) -> ClosedRange<Double> {
         guard let low = data.map(\.low).min(), let high = data.map(\.high).max() else { return 0...1 }
-        let pad = max((high - low) * 0.1, 0.5)
+        let pad = max((high - low) * 0.1, 1)
         return floor(low - pad)...ceil(high + pad)
+    }
+
+    /// Keep the selected range on the X axis so one isolated point is not stretched
+    /// to the full width (or clipped). Empty buckets are not inserted, so gaps
+    /// stay empty and isolated points still plot.
+    private var xDomain: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var start = range.startDate.map { calendar.startOfDay(for: $0) }
+            ?? buckets.first.map { calendar.startOfDay(for: $0.date) }
+            ?? today
+        var end = today
+        if let first = buckets.first?.date, first < start { start = first }
+        if let last = buckets.last?.date, last > end { end = last }
+        return min(start, end)...max(start, end)
+    }
+
+    private func chartSummary(_ data: [WeightBucket]) -> (label: String, kg: Double) {
+        if range.granularity != .day, data.count >= 2 {
+            let values = data.map(\.trend)
+            return (String(localized: "Średnia"), values.reduce(0, +) / Double(values.count))
+        }
+        if let last = visible.last, let kg = last.displayWeight {
+            return (String(localized: "Waga"), kg)
+        }
+        return (String(localized: "Waga"), data[data.count - 1].trend)
     }
 
     private func load(sync: Bool = false) async {
