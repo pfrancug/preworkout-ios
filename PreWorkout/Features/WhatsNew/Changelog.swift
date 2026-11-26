@@ -37,7 +37,7 @@ enum Changelog {
     }
 
     static let entries: [ChangelogEntry] = [
-        ChangelogEntry(version: "0.1.6", date: nil, items: [
+        ChangelogEntry(version: "0.1.6", date: "2026-11-26", items: [
             .big("hourglass", "Nowy typ „Sesja”: blok czasu, np. 40 minut handstanda, z licznikiem prób i notatką",
                  "New Session type: a time block, e.g. 40 minutes of handstand, with an attempts counter and a note"),
             .big("timer", "Seria na czas zapisuje się sama po „Stop”, a przerwa startuje od razu",
