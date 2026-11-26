@@ -66,8 +66,9 @@ struct WorkoutEditorView: View {
                     }
                 }
             }
-            .confirmationDialog("Odrzucić zmiany?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+            .alert("Odrzucić zmiany?", isPresented: $confirmDiscard) {
                 Button("Odrzuć zmiany", role: .destructive) { dismiss() }
+                Button("Anuluj", role: .cancel) {}
             }
             .sheet(isPresented: $pickingExercise) {
                 ExercisePickerView { exercise in
@@ -213,13 +214,13 @@ struct SetEditorView: View {
                 } else {
                 switch measurement {
                 case "hold":
-                    DecimalField("Czas utrzymania", value: $set.holdSeconds, unit: "s")
+                    DurationField("Czas utrzymania", seconds: $set.holdSeconds)
                 case "reps_weight":
                     IntField("Powtórzenia", value: $set.reps)
                     DecimalField("Ciężar", value: $set.weightKg, unit: "kg")
                 case "distance_time":
                     DecimalField("Dystans", value: $set.distanceM, unit: "m")
-                    IntField("Czas", value: $set.durationSeconds, unit: "s")
+                    DurationField("Czas", wholeSeconds: $set.durationSeconds)
                 default:
                     IntField("Powtórzenia", value: $set.reps)
                 }
@@ -248,7 +249,7 @@ struct SetEditorView: View {
             Section {
                 DecimalField("RPE", value: $set.rpe)
                 IntField("RIR", value: $set.rir)
-                IntField("Przerwa po serii", value: $set.restSeconds, unit: "s")
+                DurationField("Przerwa po serii", wholeSeconds: $set.restSeconds)
             } header: {
                 Text("Intensywność")
             } footer: {
@@ -260,7 +261,7 @@ struct SetEditorView: View {
                     IntField("Powtórzenia", value: $set.reps)
                 }
                 if measurement != "hold" {
-                    DecimalField("Czas utrzymania", value: $set.holdSeconds, unit: "s")
+                    DurationField("Czas utrzymania", seconds: $set.holdSeconds)
                 }
                 TextField("Notatka", text: $set.notes, axis: .vertical)
             }
@@ -277,15 +278,15 @@ struct SetEditorView: View {
         let step = set.steps[safe: index] ?? WorkoutSetStep(exerciseId: sequence[safe: index] ?? "")
         switch field {
         case .hold:
-            DecimalField(LocalizedStringKey(label), value: Binding(
+            DurationField(LocalizedStringKey(label), seconds: Binding(
                 get: { step.holdSeconds },
                 set: { updateStep(index: index, field: field, hold: $0) }
-            ), unit: "s")
+            ))
         case .duration:
-            IntField(LocalizedStringKey(label), value: Binding(
+            DurationField(LocalizedStringKey(label), wholeSeconds: Binding(
                 get: { step.durationSeconds },
                 set: { updateStep(index: index, field: field, duration: $0) }
-            ), unit: "s")
+            ))
         default:
             IntField(LocalizedStringKey(label), value: Binding(
                 get: { step.reps },

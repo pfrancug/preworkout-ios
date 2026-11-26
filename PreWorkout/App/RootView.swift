@@ -60,6 +60,7 @@ struct MainTabView: View {
 
     /// Survives the re-creation on person switch.
     @AppStorage("preworkout.tab") private var tab: Tab = .workouts
+    @State private var whatsNew = WhatsNewStore.shared
 
     var body: some View {
         TabView(selection: $tab) {
@@ -80,9 +81,13 @@ struct MainTabView: View {
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
         }
+        .sheet(isPresented: $whatsNew.showSheet) {
+            WhatsNewSheet(items: whatsNew.highlights)
+        }
         .onChange(of: tab) { live.presented = tab == .live }
         .onChange(of: live.savedCount) { tab = .workouts }
         .task {
+            whatsNew.checkOnLaunch()
             live.exerciseName = { [exercises] id in exercises.name(id) }
             await live.load(person: appState.activePersonId)
             live.presented = tab == .live

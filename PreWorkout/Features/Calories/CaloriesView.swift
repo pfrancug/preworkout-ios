@@ -110,13 +110,15 @@ struct CalculatorView: View {
         .refreshable { await refresh() }
         .sensoryFeedback(.success, trigger: saved)
         .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
-        .confirmationDialog("Usunąć cel dzienny?", isPresented: $confirmClear, titleVisibility: .visible) {
+        .alert("Usunąć cel dzienny?", isPresented: $confirmClear) {
             Button("Usuń cel", role: .destructive) { Task { await save(clear: true) } }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Usunięcie zostanie zapisane w historii celu.")
         }
-        .confirmationDialog("Wyłączyć plan kaloryczny?", isPresented: $confirmPlanOff, titleVisibility: .visible) {
+        .alert("Wyłączyć plan kaloryczny?", isPresented: $confirmPlanOff) {
             Button("Wyłącz plan", role: .destructive) { Task { await save(clear: true) } }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Cel dzienny zostanie usunięty. Zmiana trafi do historii celu.")
         }

@@ -157,8 +157,8 @@ struct WorkoutSetStep: Codable, Hashable {
 
     var valueText: String {
         if let reps { return String(reps) }
-        if let holdSeconds { return "\(holdSeconds.short(0))s" }
-        if let durationSeconds { return "\(durationSeconds)s" }
+        if let holdSeconds { return DurationText.format(holdSeconds) }
+        if let durationSeconds { return DurationText.format(durationSeconds) }
         return "–"
     }
 

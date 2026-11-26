@@ -54,13 +54,13 @@ struct WorkoutsView: View {
                     Task { await load() }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "Usunąć ten trening?",
                 isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-                titleVisibility: .visible,
                 presenting: pendingDelete
             ) { workout in
                 Button("Usuń", role: .destructive) { Task { await delete(workout) } }
+                Button("Anuluj", role: .cancel) {}
             } message: { _ in
                 Text("Tej operacji nie można cofnąć.")
             }

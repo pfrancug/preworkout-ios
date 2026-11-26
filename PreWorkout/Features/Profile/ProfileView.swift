@@ -4,6 +4,7 @@ import SwiftUI
 /// Tab: profile of the active person (photo, personal data, body and daily goal),
 /// person switch and app settings.
 struct ProfileView: View {
+    @State private var whatsNew = WhatsNewStore.shared
     @Environment(AppState.self) private var appState
     @State private var state: LoadState<UserSettings> = .idle
     @State private var form = UserSettings(name: "", age: "", height: "", sex: "", avatarUrl: nil)
@@ -49,6 +50,18 @@ struct ProfileView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        WhatsNewView()
+                    } label: {
+                        HStack {
+                            Label("Co nowego", systemImage: "sparkles")
+                            if whatsNew.hasUnseen {
+                                Spacer()
+                                Circle().fill(Color.red).frame(width: 9, height: 9)
+                                    .accessibilityLabel(Text("Nowe zmiany"))
+                            }
+                        }
+                    }
                     NavigationLink {
                         SettingsView()
                     } label: {

@@ -90,8 +90,9 @@ struct WorkoutDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Usunąć ten trening?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .alert("Usunąć ten trening?", isPresented: $confirmDelete) {
             Button("Usuń", role: .destructive) { Task { await delete() } }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Tej operacji nie można cofnąć.")
         }

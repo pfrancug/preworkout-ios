@@ -9,7 +9,7 @@ enum SetField: String, CaseIterable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .reps: return "Powtórzenia"
-        case .hold: return "Utrzymanie (s)"
+        case .hold: return "Utrzymanie"
         case .duration: return "Czas"
         case .weight: return "Obciążenie (+kg)"
         case .distance: return "Dystans (m)"
@@ -81,8 +81,7 @@ enum SetField: String, CaseIterable, Identifiable {
     func format(_ value: Double?) -> String {
         guard let value else { return "–" }
         switch self {
-        case .hold: return value < 60 ? value.short(0) : Clock.text(value)
-        case .duration: return Clock.text(value)
+        case .hold, .duration: return DurationText.format(value)
         case .weight: return value.short(2)
         default: return value.short(1)
         }
@@ -162,7 +161,7 @@ extension SetField {
     var unit: LocalizedStringKey? {
         switch self {
         case .reps: return "powt."
-        case .hold: return "sekundy"
+        case .hold: return "czas"
         case .duration: return "czas"
         case .weight: return "kg"
         case .distance: return "metry"
@@ -177,64 +176,157 @@ extension SetField {
     }
 }
 
-/// Small round glass − / + (repeats while held).
+/// Tap = one step, hold = repeat. Unlike a Button it gives up as soon as the
+/// finger moves more than a few points, so a swipe that starts on − / +
+/// never changes the value (the stage swipe still sees the drag).
+struct StepPress: ViewModifier {
+    var enabled = true
+    let action: () -> Void
+    @State private var pressed = false
+    @State private var cancelled = false
+    @State private var repeated = false
+    @State private var repeatTask: Task<Void, Never>?
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(pressed ? 0.88 : 1)
+            .animation(.snappy(duration: 0.15), value: pressed)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { g in
+                        guard enabled else { return }
+                        if !pressed && !cancelled {
+                            pressed = true
+                            repeated = false
+                            startRepeat()
+                        }
+                        if hypot(g.translation.width, g.translation.height) > 10 {
+                            cancel()
+                        }
+                    }
+                    .onEnded { _ in
+                        let fire = pressed && !cancelled && !repeated && enabled
+                        cancel()
+                        cancelled = false
+                        if fire { action() }
+                    }
+            )
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { if enabled { action() } }
+    }
+
+    private func startRepeat() {
+        repeatTask?.cancel()
+        repeatTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            while !Task.isCancelled && pressed && !cancelled {
+                repeated = true
+                action()
+                try? await Task.sleep(for: .milliseconds(90))
+            }
+        }
+    }
+
+    private func cancel() {
+        if pressed { cancelled = true }
+        pressed = false
+        repeatTask?.cancel()
+        repeatTask = nil
+    }
+}
+
+extension View {
+    func stepPress(enabled: Bool = true, action: @escaping () -> Void) -> some View {
+        modifier(StepPress(enabled: enabled, action: action))
+    }
+}
+
+/// Round glass − / +: tap = one step, hold = repeat. `hit` is the touch target
+/// (bigger than the circle), so it is easy to hit without touching the number.
 struct LVStepButton: View {
     let up: Bool
     var size: CGFloat = 52
+    var hit: CGFloat? = nil
     var disabled = false
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: up ? "plus" : "minus")
-                .font(.system(size: size * 0.36, weight: .bold))
-                .foregroundStyle(LV.text)
-                .frame(width: size, height: size)
-                .lvGlass(Circle())
-        }
-        .buttonStyle(LVPress(scale: 0.88))
-        .buttonRepeatBehavior(.enabled)
-        .disabled(disabled)
-        .opacity(disabled ? 0.35 : 1)
-        .accessibilityLabel(up ? Text("Więcej") : Text("Mniej"))
+        Image(systemName: up ? "plus" : "minus")
+            .font(.system(size: size * 0.36, weight: .bold))
+            .foregroundStyle(LV.text)
+            .frame(width: size, height: size)
+            .lvGlass(Circle())
+            .frame(width: max(size, hit ?? size), height: max(size, hit ?? size))
+            .stepPress(enabled: !disabled, action: action)
+            .opacity(disabled ? 0.35 : 1)
+            .accessibilityLabel(up ? Text("Więcej") : Text("Mniej"))
     }
 }
 
-/// Big number dial: − value +, and dragging sideways over the number scrubs it.
+/// Big number dial: − value +. Reps etc.: dragging sideways over the number
+/// scrubs it. Time fields: tap the number for hour · minute · second wheels.
 struct NumberDial: View {
     let field: SetField
     @Binding var set: WorkoutSet
     var size: CGFloat = 76
     @State private var dragSteps = 0
+    @State private var wheels = false
+
+    private var isTime: Bool { field == .hold || field == .duration }
 
     var body: some View {
         let value = field.get(set)
         VStack(spacing: 6) {
             Text(field.title).lvCaps()
-            HStack(spacing: 14) {
-                LVStepButton(up: false, disabled: value == nil || (value ?? 0) <= field.range.lowerBound) { step(false) }
-                Text(verbatim: field.display(value))
-                    .font(.system(size: size, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(LV.heroGradient)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .frame(minWidth: 120)
-                    .contentTransition(.numericText())
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 4)
-                            .onChanged { g in
-                                let steps = Int(g.translation.width / 18)
-                                while dragSteps < steps { dragSteps += 1; step(true) }
-                                while dragSteps > steps { dragSteps -= 1; step(false) }
-                            }
-                            .onEnded { _ in dragSteps = 0 }
-                    )
-                LVStepButton(up: true, disabled: (value ?? 0) >= field.range.upperBound) { step(true) }
+            HStack(spacing: 10) {
+                LVStepButton(up: false, hit: 60, disabled: value == nil || (value ?? 0) <= field.range.lowerBound) { step(false) }
+                number(value)
+                LVStepButton(up: true, hit: 60, disabled: (value ?? 0) >= field.range.upperBound) { step(true) }
+            }
+            if isTime {
+                if wheels {
+                    DurationWheel(seconds: Binding(
+                        get: { field.get(set) ?? 0 },
+                        set: { v in field.put(v > 0 ? v : nil, into: &set) }
+                    ))
+                    .colorScheme(.dark)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                } else {
+                    Text("Dotknij czasu, aby ustawić godziny, minuty i sekundy")
+                        .font(.system(size: 12)).foregroundStyle(LV.faint)
+                }
             }
         }
         .sensoryFeedback(.selection, trigger: field.get(set))
+    }
+
+    @ViewBuilder
+    private func number(_ value: Double?) -> some View {
+        let text = Text(verbatim: field.display(value))
+            .font(.system(size: size, weight: .black, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(LV.heroGradient)
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
+            .frame(minWidth: 120)
+            .contentTransition(.numericText())
+            .contentShape(Rectangle())
+        if isTime {
+            text.onTapGesture { withAnimation(LV.spring) { wheels.toggle() } }
+                .accessibilityAddTraits(.isButton)
+        } else {
+            text.gesture(
+                DragGesture(minimumDistance: 4)
+                    .onChanged { g in
+                        let steps = Int(g.translation.width / 18)
+                        while dragSteps < steps { dragSteps += 1; step(true) }
+                        while dragSteps > steps { dragSteps -= 1; step(false) }
+                    }
+                    .onEnded { _ in dragSteps = 0 }
+            )
+        }
     }
 
     private func step(_ up: Bool) {
@@ -251,12 +343,11 @@ struct LVInlineStepper: View {
     var body: some View {
         let value = field.get(set)
         HStack(spacing: 0) {
-            Button { withAnimation(.snappy) { field.bump(&set, up: false) } } label: {
-                Image(systemName: "minus").frame(width: 44, height: 44)
-            }
-            .buttonRepeatBehavior(.enabled)
-            .disabled(value == nil || (value ?? 0) <= field.range.lowerBound)
-            .accessibilityLabel(Text("Mniej"))
+            let canDown = !(value == nil || (value ?? 0) <= field.range.lowerBound)
+            Image(systemName: "minus").frame(width: 48, height: 48)
+                .stepPress(enabled: canDown) { withAnimation(.snappy) { field.bump(&set, up: false) } }
+                .opacity(canDown ? 1 : 0.35)
+                .accessibilityLabel(Text("Mniej"))
             VStack(spacing: 0) {
                 Text(verbatim: field == .weight ? "\(field.display(value ?? 0)) kg" : field.display(value))
                     .font(.system(size: 17, weight: .bold, design: .rounded))
@@ -267,16 +358,14 @@ struct LVInlineStepper: View {
                 }
             }
             .frame(minWidth: 72)
-            Button { withAnimation(.snappy) { field.bump(&set, up: true) } } label: {
-                Image(systemName: "plus").frame(width: 44, height: 44)
-            }
-            .buttonRepeatBehavior(.enabled)
-            .disabled((value ?? 0) >= field.range.upperBound)
-            .accessibilityLabel(Text("Więcej"))
+            let canUp = (value ?? 0) < field.range.upperBound
+            Image(systemName: "plus").frame(width: 48, height: 48)
+                .stepPress(enabled: canUp) { withAnimation(.snappy) { field.bump(&set, up: true) } }
+                .opacity(canUp ? 1 : 0.35)
+                .accessibilityLabel(Text("Więcej"))
         }
         .font(.system(size: 15, weight: .bold))
         .foregroundStyle(LV.text)
-        .buttonStyle(LVPress(scale: 0.85))
         .lvGlass(Capsule())
         .sensoryFeedback(.selection, trigger: field.get(set))
     }
@@ -413,9 +502,9 @@ enum LiveFormat {
         } else if let weight {
             parts.append(weight)
         }
-        if let hold = set.holdSeconds { parts.append(hold < 60 ? "\(hold.short(0)) s" : Clock.text(hold)) }
+        if set.stepsSummary == nil, let hold = set.holdSeconds { parts.append(DurationText.format(hold)) }
         if let distance = set.distanceM { parts.append("\(distance.short()) m") }
-        if let duration = set.durationSeconds { parts.append(Clock.text(Double(duration))) }
+        if set.stepsSummary == nil, let duration = set.durationSeconds { parts.append(DurationText.format(duration)) }
         return parts.isEmpty ? "•" : parts.joined(separator: " · ")
     }
 
@@ -440,7 +529,13 @@ enum LiveFormat {
         if let repsText = range(target["targetRepsMin"], target["targetRepsMax"]) {
             parts.append(String(localized: "\(repsText) powt. w serii"))
         }
-        if let hold = range(target["targetHoldMin"], target["targetHoldMax"]) { parts.append("\(hold) s") }
+        let lo = target["targetHoldMin"], hi = target["targetHoldMax"]
+        switch (lo, hi) {
+        case let (l?, h?) where l != h: parts.append("\(DurationText.format(l))–\(DurationText.format(h))")
+        case let (l?, _): parts.append(DurationText.format(l))
+        case let (nil, h?): parts.append(DurationText.format(h))
+        default: break
+        }
         if let kg = target["targetWeightKg"], kg > 0 { parts.append("+\(kg.short(2)) kg") }
         if let rpe = target["targetRpe"] { parts.append("RPE \(rpe.short())") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

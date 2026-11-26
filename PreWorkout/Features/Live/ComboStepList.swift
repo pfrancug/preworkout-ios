@@ -30,7 +30,7 @@ struct ComboStepList: View {
                     .font(.system(size: 16, weight: .semibold))
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
-                Text(field == .reps ? "powt." : "s")
+                Text(field == .reps ? "powt." : "czas")
                     .lvCaps(LV.muted)
             }
             Spacer(minLength: 8)
@@ -38,6 +38,8 @@ struct ComboStepList: View {
                 onAdjust(index, field, false)
             }
             Text(verbatim: running ? Clock.text(value ?? 0) : field.display(value))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .monospacedDigit()
                 .frame(minWidth: 64)

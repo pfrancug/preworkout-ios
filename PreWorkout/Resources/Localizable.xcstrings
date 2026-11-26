@@ -602,6 +602,26 @@
         }
       }
     },
+    "Co nowego": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's new"
+          }
+        }
+      }
+    },
+    "Co nowego w PreWorkout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's new in PreWorkout"
+          }
+        }
+      }
+    },
     "Combo": {
       "localizations": {
         "en": {
@@ -732,12 +752,12 @@
         }
       }
     },
-    "Do bieżącej kombinacji (bez przerwy)": {
+    "Do bieżącej kombinacji": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Into the current combo (no rest)"
+            "value": "Into the current combo"
           }
         }
       }
@@ -848,6 +868,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Default rest"
+          }
+        }
+      }
+    },
+    "Dotknij czasu, aby ustawić godziny, minuty i sekundy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap the time to set hours, minutes and seconds"
           }
         }
       }
@@ -1028,6 +1058,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Elite"
+          }
+        }
+      }
+    },
+    "Gdzie dodać?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where to add it?"
           }
         }
       }
@@ -1282,6 +1322,16 @@
         }
       }
     },
+    "Kolejny ruch tej samej serii, bez przerwy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next movement of the same set, no rest"
+          }
+        }
+      }
+    },
     "Koniec": {
       "localizations": {
         "en": {
@@ -1462,6 +1512,16 @@
         }
       }
     },
+    "Na zmianę z: %@, przerwa po rundzie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternating with: %@, rest after the round"
+          }
+        }
+      }
+    },
     "Na żywo": {
       "localizations": {
         "en": {
@@ -1508,6 +1568,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Most reps"
+          }
+        }
+      }
+    },
+    "Następne po: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right after: %@"
           }
         }
       }
@@ -1722,6 +1792,16 @@
         }
       }
     },
+    "Nowe zmiany": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New changes"
+          }
+        }
+      }
+    },
     "Nowe ćwiczenie": {
       "localizations": {
         "en": {
@@ -1841,6 +1921,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Person"
+          }
+        }
+      }
+    },
+    "Ostatnie ćwiczenie treningu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last exercise of the workout"
           }
         }
       }
@@ -2228,6 +2318,16 @@
         }
       }
     },
+    "Przywróć": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        }
+      }
+    },
     "Płeć": {
       "localizations": {
         "en": {
@@ -2500,6 +2600,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop"
+          }
+        }
+      }
+    },
+    "Stop i zapisz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop & save"
+          }
+        }
+      }
+    },
+    "Super": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
           }
         }
       }
@@ -2934,12 +3054,12 @@
         }
       }
     },
-    "Utrzymanie (s)": {
+    "Utrzymanie": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hold (s)"
+            "value": "Hold"
           }
         }
       }
@@ -3020,6 +3140,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Version"
+          }
+        }
+      }
+    },
+    "Wersja %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
           }
         }
       }
@@ -3190,6 +3320,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose exercise"
+          }
+        }
+      }
+    },
+    "Wyczyść": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
           }
         }
       }
@@ -3564,6 +3704,16 @@
         }
       }
     },
+    "Zobacz wszystkie zmiany": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See all changes"
+          }
+        }
+      }
+    },
     "Zrobiona seria %lld": {
       "localizations": {
         "en": {
@@ -3614,6 +3764,16 @@
         }
       }
     },
+    "godz.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "h"
+          }
+        }
+      }
+    },
     "https://…": {
       "shouldTranslate": false
     },
@@ -3640,22 +3800,22 @@
         }
       }
     },
-    "lub przesuń w górę": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "or swipe up"
-          }
-        }
-      }
-    },
     "metry": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "meters"
+          }
+        }
+      }
+    },
+    "min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
           }
         }
       }
@@ -3700,12 +3860,12 @@
         }
       }
     },
-    "sekundy": {
+    "sek.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "seconds"
+            "value": "sec"
           }
         }
       }

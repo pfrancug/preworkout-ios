@@ -57,12 +57,8 @@ extension Optional where Wrapped == Double {
     }
 }
 
-/// "1:30" for 90 s, "45 s" under a minute.
-func durationText(seconds: Double) -> String {
-    let total = Int(seconds.rounded())
-    guard total >= 60 else { return "\(seconds.short()) s" }
-    return String(format: "%d:%02d", total / 60, total % 60)
-}
+/// "0:45", "1:30", "1:05:03" (see `DurationText`).
+func durationText(seconds: Double) -> String { DurationText.format(seconds) }
 
 enum SetFormat {
     /// Compact one-line description of a logged set, e.g. "8 powt. · +10 kg · RPE 8".

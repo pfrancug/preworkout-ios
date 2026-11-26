@@ -23,15 +23,23 @@ struct LiveQueueSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Gotowe") { dismiss() } }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Usunąć z seriami?",
             isPresented: Binding(get: { pendingRemove != nil }, set: { if !$0 { pendingRemove = nil } }),
-            titleVisibility: .visible,
             presenting: pendingRemove
         ) { index in
             Button("Usuń", role: .destructive) { live.update { s, _ in s.removeExercise(index) } }
+            Button("Anuluj", role: .cancel) {}
         }
         .lvSheet([.medium, .large])
+    }
+
+    private func restoreAction(_ index: Int) -> () -> Void {
+        {
+            live.tap()
+            live.update { s, _ in s.restoreExercise(index) }
+            dismiss()
+        }
     }
 
     private func list(_ session: LiveSession) -> some View {
@@ -43,7 +51,8 @@ struct LiveQueueSheet: View {
                         exercise: e,
                         name: live.name(of: e),
                         groupLabel: e.item.groupId.flatMap { labels[$0] },
-                        isCurrent: index == session.current
+                        isCurrent: index == session.current,
+                        onRestore: e.status == .skipped ? restoreAction(index) : nil
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -57,6 +66,8 @@ struct LiveQueueSheet: View {
                             .tint(LV.danger)
                         if e.isOpen {
                             Button("Pomiń", systemImage: "forward") { live.update { s, _ in s.skipExercise(index) } }
+                        } else if e.status == .skipped {
+                            Button("Przywróć", systemImage: "arrow.uturn.backward") { live.update { s, _ in s.restoreExercise(index) } }
                         } else {
                             Button("Wróć do niego", systemImage: "arrow.uturn.backward") { live.update { s, _ in s.reopenExercise(index) } }
                         }
@@ -103,6 +114,7 @@ private struct QueueRow: View {
     let name: String
     let groupLabel: String?
     let isCurrent: Bool
+    var onRestore: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -126,7 +138,17 @@ private struct QueueRow: View {
                     .monospacedDigit()
             }
             Spacer()
-            if isCurrent {
+            if let onRestore {
+                Button(action: onRestore) {
+                    Label("Przywróć", systemImage: "arrow.uturn.backward")
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(LV.ember.opacity(0.18), in: Capsule())
+                        .foregroundStyle(LV.text)
+                }
+                .buttonStyle(.borderless)
+            } else if isCurrent {
                 Text("Teraz").lvCaps(LV.ember)
             }
         }

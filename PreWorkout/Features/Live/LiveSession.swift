@@ -295,6 +295,27 @@ struct LiveSession: Codable, Hashable {
         exercises[index].finishedAt = nil
     }
 
+    /// Brings a skipped exercise back and makes it current: set 1 of the plan
+    /// (or the next set when it already has sets), never fewer planned sets.
+    mutating func restoreExercise(_ index: Int) {
+        guard exercises.indices.contains(index) else { return }
+        reopenExercise(index)
+        let done = exercises[index].item.sets.count
+        if exercises[index].plannedSets <= done { exercises[index].plannedSets = done + 1 }
+        exercises[index].plannedSets = max(exercises[index].plannedSets, 1)
+        if index != current { setTimer = nil }
+        current = index
+    }
+
+    /// "One more set": the next set becomes N+1 of N+1 and is current.
+    mutating func addOneMoreSet(_ index: Int) {
+        guard exercises.indices.contains(index) else { return }
+        reopenExercise(index)
+        exercises[index].plannedSets = exercises[index].item.sets.count + 1
+        if index != current { setTimer = nil }
+        current = index
+    }
+
     mutating func moveExercise(_ index: Int, by dir: Int) {
         let to = index + dir
         guard exercises.indices.contains(index), exercises.indices.contains(to) else { return }
@@ -553,8 +574,7 @@ enum Clock {
     static func text(_ seconds: Double) -> String {
         let over = seconds < 0
         let total = Int(abs(over ? seconds.rounded(.down) : seconds.rounded(.up)))
-        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
-        let body = h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+        let body = DurationText.format(total)
         return over ? "+" + body : body
     }
 

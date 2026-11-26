@@ -149,8 +149,9 @@ struct ExerciseDetailView: View {
         }
         .sheet(isPresented: $editing) { ExerciseEditorView(exercise: exercise) }
         .sheet(isPresented: $editingAliases) { AliasesEditorView(exercise: exercise) }
-        .confirmationDialog("Usunąć to ćwiczenie?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .alert("Usunąć to ćwiczenie?", isPresented: $confirmDelete) {
             Button("Usuń", role: .destructive) { Task { await delete(exercise) } }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Ćwiczenia użytego w planach lub treningach nie da się usunąć – możesz je zarchiwizować w edycji.")
         }

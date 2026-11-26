@@ -67,29 +67,28 @@ struct LiveWorkoutView: View {
                 if addGroupId != nil || live.session?.currentExercise == nil {
                     add(exercise, mode: .end)
                 } else {
-                    picked = exercise
+                    // The picker sheet closes first; then the placement sheet opens.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { picked = exercise }
                 }
             }
         }
-        .confirmationDialog(
-            "Dodaj ćwiczenie",
-            isPresented: Binding(get: { picked != nil }, set: { if !$0 { picked = nil } }),
-            titleVisibility: .visible,
-            presenting: picked
-        ) { exercise in
-            Button("Na koniec") { add(exercise, mode: .end) }
-            Button("Zaraz po bieżącym") { add(exercise, mode: .next) }
-            Button("Superseria z bieżącym") { add(exercise, mode: .superset) }
-            Button("Do bieżącej kombinacji (bez przerwy)") { add(exercise, mode: .combo) }
-        } message: { exercise in
-            Text(verbatim: exercise.name)
+        .sheet(item: $picked) { exercise in
+            AddPlacementSheet(
+                exerciseName: exercise.name,
+                currentName: live.session?.currentExercise.map { live.name(of: $0) } ?? ""
+            ) { mode in
+                add(exercise, mode: mode)
+            }
         }
-        .confirmationDialog("Porzucić ten trening?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+        // Alerts (centered, no arrow): these are opened from menus and sheets,
+        // so there is no stable view a popover arrow could point at.
+        .alert("Porzucić ten trening?", isPresented: $confirmDiscard) {
             Button("Porzuć trening", role: .destructive) { live.clear() }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Wszystkie serie zapisane w tej sesji przepadną. Tego nie da się cofnąć.")
         }
-        .confirmationDialog("Nie można jeszcze zakończyć", isPresented: $confirmUnfinished, titleVisibility: .visible) {
+        .alert("Nie można jeszcze zakończyć", isPresented: $confirmUnfinished) {
             Button("Pomiń niedokończone") {
                 live.update { s, _ in s.skipIncomplete() }
                 finishing = true
@@ -133,10 +132,10 @@ struct LiveWorkoutView: View {
                 header(session, now: now, mood: md)
                 Group {
                     switch st {
-                    case .empty: emptyStage
+                    case .empty: emptyStage.browsable(browseGesture(session))
                     case .active: activeStage(session, now: now, mood: md)
-                    case .rest: restStage(session, now: now)
-                    case .complete: completeStage(session)
+                    case .rest: restStage(session, now: now).browsable(browseGesture(session))
+                    case .complete: completeStage(session).browsable(browseGesture(session))
                     }
                 }
                 .frame(maxWidth: 460, maxHeight: .infinity)
@@ -147,8 +146,6 @@ struct LiveWorkoutView: View {
                     insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
                     removal: .opacity
                 ))
-                .contentShape(Rectangle())
-                .gesture(browseGesture(session))
                 dock(session, stage: st, now: now, mood: md)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 12)
@@ -159,11 +156,17 @@ struct LiveWorkoutView: View {
         .foregroundStyle(LV.text)
     }
 
-    /// Horizontal swipe on the stage browses exercises.
+    /// Horizontal swipe on the stage browses exercises. Runs alongside the
+    /// buttons (simultaneous), but only a clearly horizontal drag counts:
+    /// 24 pt before it starts, then ≥ 60 pt sideways (or a quick flick) and
+    /// at least twice as far sideways as up/down. − / + and the number give
+    /// up after 10 pt of movement, so a swipe never changes a value.
     private func browseGesture(_ session: LiveSession) -> some Gesture {
-        DragGesture(minimumDistance: 30)
+        DragGesture(minimumDistance: 24)
             .onEnded { g in
-                guard abs(g.translation.width) > 80, abs(g.translation.width) > abs(g.translation.height) * 1.5 else { return }
+                let dx = g.translation.width, dy = g.translation.height
+                let far = abs(dx) > 60 || (abs(g.predictedEndTranslation.width) > 160 && abs(dx) > 30)
+                guard far, abs(dx) > abs(dy) * 2 else { return }
                 let target = session.current + (g.translation.width < 0 ? 1 : -1)
                 guard session.exercises.indices.contains(target) else { return }
                 forward = g.translation.width < 0
@@ -192,6 +195,9 @@ struct LiveWorkoutView: View {
                         Text(verbatim: Clock.elapsed(session.elapsedMs(now)))
                             .font(.system(size: 19, weight: .semibold, design: .rounded))
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .fixedSize(horizontal: true, vertical: false)
                         Image(systemName: session.isPaused ? "play.fill" : "pause.fill")
                             .font(.system(size: 12))
                             .opacity(session.isPaused ? 1 : 0.6)
@@ -201,6 +207,7 @@ struct LiveWorkoutView: View {
                     .lvGlass(Capsule())
                 }
                 .buttonStyle(LVPress(scale: 0.95))
+                .layoutPriority(1)
                 .accessibilityLabel(session.isPaused ? Text("Wznów") : Text("Pauza"))
                 Spacer()
                 menu(session)
@@ -317,29 +324,32 @@ struct LiveWorkoutView: View {
         let planned = max(e.plannedSets, done + 1)
         let setNumber = done + 1
         return VStack(spacing: 0) {
-            title(session, e, index: index)
-            Spacer(minLength: 16)
-            VStack(spacing: 18) {
-                // NOW: the set you are about to do. Never shows a logged set.
-                HStack(spacing: 8) {
-                    Circle().fill(mood.glow).frame(width: 8, height: 8).shadow(color: mood.glow, radius: 4)
-                    Text("Teraz: seria \(setNumber) z \(planned)")
-                        .font(.system(size: 14, weight: .heavy))
-                        .tracking(1.2)
-                        .textCase(.uppercase)
+            VStack(spacing: 0) {
+                title(session, e, index: index)
+                Spacer(minLength: 16)
+                VStack(spacing: 18) {
+                    // NOW: the set you are about to do. Never shows a logged set.
+                    HStack(spacing: 8) {
+                        Circle().fill(mood.glow).frame(width: 8, height: 8).shadow(color: mood.glow, radius: 4)
+                        Text("Teraz: seria \(setNumber) z \(planned)")
+                            .font(.system(size: 14, weight: .heavy))
+                            .tracking(1.2)
+                            .textCase(.uppercase)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(height: 36)
+                    .background(mood.glow.opacity(0.16), in: Capsule())
+                    .overlay(Capsule().stroke(mood.glow.opacity(0.5), lineWidth: 1))
+                    hero(session, e, index: index, now: now)
+                    if let target = LiveFormat.target(e.target) {
+                        Label { Text("Cel: \(target)") } icon: { Image(systemName: "scope") }
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(LV.faint)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .frame(height: 36)
-                .background(mood.glow.opacity(0.16), in: Capsule())
-                .overlay(Capsule().stroke(mood.glow.opacity(0.5), lineWidth: 1))
-                hero(session, e, index: index, now: now)
-                if let target = LiveFormat.target(e.target) {
-                    Label { Text("Cel: \(target)") } icon: { Image(systemName: "scope") }
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(LV.faint)
-                }
+                Spacer(minLength: 16)
             }
-            Spacer(minLength: 16)
+            .browsable(browseGesture(session))
             doneStrip(e, index: index, planned: planned, mood: mood)
         }
     }
@@ -375,6 +385,8 @@ struct LiveWorkoutView: View {
                     Text(verbatim: Clock.text(running != nil ? sec.rounded(.down) : (recorded ?? target ?? 0)))
                         .font(.system(size: 64, weight: .heavy, design: .rounded))
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         .contentTransition(.numericText())
                         .foregroundStyle(reached ? AnyShapeStyle(LV.lime) : AnyShapeStyle(LV.text))
                         .padding(.top, 2)
@@ -397,35 +409,37 @@ struct LiveWorkoutView: View {
             let primary = SetField.primary(measurement(e))
             let main = primary.first ?? .reps
             VStack(spacing: 16) {
-                HStack(alignment: .center, spacing: 18) {
-                    LVStepButton(up: false, size: 54, disabled: (main.get(e.pending) ?? 0) <= main.range.lowerBound) {
+                HStack(alignment: .center, spacing: 4) {
+                    LVStepButton(up: false, size: 54, hit: 68, disabled: (main.get(e.pending) ?? 0) <= main.range.lowerBound) {
                         withAnimation(.snappy) { main.bump(&pending.wrappedValue, up: false) }
                     }
-                    Button {
-                        sheet = .log(.pending, index: index, setIndex: e.item.sets.count)
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text(verbatim: main.display(main.get(e.pending)))
-                                .font(.system(size: 132, weight: .black, design: .rounded))
-                                .monospacedDigit()
-                                .foregroundStyle(LV.heroGradient)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.4)
-                                .contentTransition(.numericText())
-                                .background(
-                                    Circle().fill(RadialGradient(colors: [LV.ember.opacity(0.35), .clear], center: .center, startRadius: 0, endRadius: 120))
-                                        .frame(width: 240, height: 240)
-                                        .blur(radius: 20)
-                                )
-                            if let unit = main.unit {
-                                Text(unit).lvCaps()
-                            }
+                    // Plain tap only (a tap gesture fails once the finger moves),
+                    // hit area = the number itself, the glow is not touchable.
+                    VStack(spacing: 2) {
+                        Text(verbatim: main.display(main.get(e.pending)))
+                            .font(.system(size: 132, weight: .black, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(LV.heroGradient)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                            .contentTransition(.numericText())
+                            .background(
+                                Circle().fill(RadialGradient(colors: [LV.ember.opacity(0.35), .clear], center: .center, startRadius: 0, endRadius: 120))
+                                    .frame(width: 240, height: 240)
+                                    .blur(radius: 20)
+                                    .allowsHitTesting(false)
+                            )
+                        if let unit = main.unit {
+                            Text(unit).lvCaps()
                         }
-                        .frame(minWidth: 150)
                     }
-                    .buttonStyle(LVPress(scale: 0.96))
+                    .frame(minWidth: 130)
+                    .contentShape(Rectangle())
+                    .onTapGesture { sheet = .log(.pending, index: index, setIndex: e.item.sets.count) }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(Text("Zmień wartości serii"))
-                    LVStepButton(up: true, size: 54, disabled: (main.get(e.pending) ?? 0) >= main.range.upperBound) {
+                    LVStepButton(up: true, size: 54, hit: 68, disabled: (main.get(e.pending) ?? 0) >= main.range.upperBound) {
                         withAnimation(.snappy) { main.bump(&pending.wrappedValue, up: true) }
                     }
                 }
@@ -621,14 +635,22 @@ struct LiveWorkoutView: View {
         return VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 0) {
-                Image(systemName: allDone ? "flag.checkered" : "checkmark")
-                    .font(.system(size: 48, weight: .heavy))
-                    .foregroundStyle(.black)
-                    .frame(width: 112, height: 112)
-                    .background(LiveMood.done.cta, in: Circle())
-                    .shadow(color: LV.lime.opacity(0.6), radius: 40)
+                if e.status == .skipped {
+                    Image(systemName: "forward.end")
+                        .font(.system(size: 44, weight: .heavy))
+                        .foregroundStyle(LV.text)
+                        .frame(width: 112, height: 112)
+                        .lvGlass(Circle())
+                } else {
+                    Image(systemName: allDone ? "flag.checkered" : "checkmark")
+                        .font(.system(size: 48, weight: .heavy))
+                        .foregroundStyle(.black)
+                        .frame(width: 112, height: 112)
+                        .background(LiveMood.done.cta, in: Circle())
+                        .shadow(color: LV.lime.opacity(0.6), radius: 40)
+                }
                 Group {
-                    if allDone { Text("Wszystko zrobione") } else if e.status == .skipped { Text("Pominięte") } else { Text("Ćwiczenie ukończone") }
+                    if e.status == .skipped { Text("Pominięte") } else if allDone { Text("Wszystko zrobione") } else { Text("Ćwiczenie ukończone") }
                 }
                 .lvCaps()
                 .padding(.top, 24)
@@ -646,16 +668,24 @@ struct LiveWorkoutView: View {
                     .padding(.top, 8)
                 }
                 HStack(spacing: 10) {
-                    LVPill(action: {
-                        live.tap()
-                        live.update { s, _ in
-                            guard s.exercises.indices.contains(index) else { return }
-                            if s.exercises[index].status == .done || s.exercises[index].status == .skipped { s.reopenExercise(index) }
-                            s.exercises[index].plannedSets = max(s.exercises[index].plannedSets, s.exercises[index].item.sets.count) + 1
+                    if e.status == .skipped {
+                        // Skipped: bring it back where it was (set 1 of N, or the next set).
+                        LVPill(action: {
+                            live.tap()
+                            live.update { s, _ in s.restoreExercise(index) }
+                        }) {
+                            Image(systemName: "arrow.uturn.backward")
+                            Text("Przywróć")
                         }
-                    }) {
-                        Image(systemName: "plus")
-                        Text("Jeszcze seria")
+                    } else {
+                        // One more set = set N+1 of N+1, never back to set 1.
+                        LVPill(action: {
+                            live.tap()
+                            live.update { s, _ in s.addOneMoreSet(index) }
+                        }) {
+                            Image(systemName: "plus")
+                            Text("Jeszcze seria")
+                        }
                     }
                     LVPill(action: { openAdd() }) {
                         Image(systemName: "plus")
@@ -741,6 +771,11 @@ struct LiveWorkoutView: View {
         return VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 22) {
                 SideButton(icon: e.item.sets.isEmpty ? "forward.end" : "flag", label: e.item.sets.isEmpty ? Text("Pomiń") : Text("Koniec")) {
+                    if running && field != nil {
+                        // A running hold is a set in progress: save it, don't drop it.
+                        logSet(index: index)
+                        return
+                    }
                     live.tap()
                     forward = true
                     live.update { s, t in
@@ -756,11 +791,11 @@ struct LiveWorkoutView: View {
                         } content: {
                             Image(systemName: "play.fill").font(.system(size: 38)).offset(x: 3)
                         }
-                    } else if running, let field {
-                        LVOrb(mood: .active, label: "Stop") {
-                            live.success()
-                            timedKey = stopKey(e)
-                            live.update { s, t in s.stopSetTimer(t, field: field) }
+                    } else if running, field != nil {
+                        // Stop saves the set with the measured time and starts the
+                        // rest right away; "Pomiń" during the rest only skips the rest.
+                        LVOrb(mood: .active, label: "Stop i zapisz") {
+                            logSet(index: index)
                         } content: {
                             Image(systemName: "stop.fill").font(.system(size: 32))
                         }
@@ -772,7 +807,7 @@ struct LiveWorkoutView: View {
                         }
                     }
                     Group {
-                        if needsStart { Text("Start stopera") } else if running { Text("Stop") } else { Text("Zakończ serię \(setNumber)") }
+                        if needsStart { Text("Start stopera") } else if running { Text("Stop i zapisz") } else { Text("Zakończ serię \(setNumber)") }
                     }
                     .font(.system(size: 14, weight: .bold))
                 }
@@ -784,8 +819,7 @@ struct LiveWorkoutView: View {
                         Text("Zapisz bez stopera").font(.system(size: 13, weight: .medium)).foregroundStyle(LV.muted)
                     }
                 } else {
-                    Label("lub przesuń w górę", systemImage: "chevron.up")
-                        .font(.system(size: 12)).foregroundStyle(LV.faint)
+                    Color.clear
                 }
             }
             .frame(height: 28)
@@ -808,6 +842,9 @@ struct LiveWorkoutView: View {
             Text(verbatim: Clock.elapsed(session.elapsedMs(now)))
                 .font(.system(size: 72, weight: .heavy, design: .rounded))
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .padding(.horizontal, 24)
             Text("Pauza: zegar treningu i przerwa są zatrzymane.")
                 .font(.system(size: 14)).foregroundStyle(LV.muted)
                 .multilineTextAlignment(.center).frame(maxWidth: 260)

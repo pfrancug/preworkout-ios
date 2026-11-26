@@ -8,7 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from strings_en import EN, PLURALS, VERBATIM  # noqa: E402
 
-CALLS = r'(?:Text|Label|Button|Section|navigationTitle|TextField|SecureField|Toggle|Picker|LabeledContent|DatePicker|Tag|ContentUnavailableView|confirmationDialog|alert|IntField|DecimalField|chainRow|planRow|DisclosureGroup|NavigationLink|String\(localized:)'
+CALLS = r'(?:Text|Label|Button|Section|navigationTitle|TextField|SecureField|Toggle|Picker|LabeledContent|DatePicker|Tag|ContentUnavailableView|confirmationDialog|alert|IntField|DecimalField|DurationField|chainRow|planRow|DisclosureGroup|NavigationLink|String\(localized:)'
 LIT = r'"((?:[^"\\]|\\.|\\\([^)]*(?:\([^)]*\))?[^)]*\))*)"'
 # Interpolations whose last identifier is one of these are integers (%lld).
 INT_NAMES = {"count", "number", "minutes", "reps", "deficit", "age", "exercisecount", "setcount", "statuscode", "n", "total", "setnumber", "done", "planned", "index", "setindex", "setno", "plannedsets"}

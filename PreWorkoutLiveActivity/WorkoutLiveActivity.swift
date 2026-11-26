@@ -57,7 +57,8 @@ struct WorkoutLiveActivity: Widget {
                     if state.hasRest { RestClock(state: state) } else { WorkoutClock(state: state) }
                 }
                 .monospacedDigit()
-                .frame(maxWidth: 56)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(maxWidth: 64)
                 .foregroundStyle(state.hasRest ? .orange : .green)
             } minimal: {
                 Image(systemName: state.hasRest ? "timer" : "figure.strengthtraining.traditional")
@@ -111,11 +112,16 @@ private struct WorkoutClock: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        if let paused = state.pausedElapsed {
-            Text(verbatim: format(paused))
-        } else {
-            Text(timerInterval: state.clockStart...Date.distantFuture, countsDown: false)
+        Group {
+            if let paused = state.pausedElapsed {
+                Text(verbatim: format(paused))
+            } else {
+                Text(timerInterval: state.clockStart...Date.distantFuture, countsDown: false)
+            }
         }
+        // Past 1:00:00 the text must shrink, never wrap to a second line.
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
     }
 }
 
@@ -124,13 +130,17 @@ private struct RestClock: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        if let paused = state.restPausedRemaining {
-            Text(verbatim: format(paused))
-        } else if let end = state.restEnd, end > Date() {
-            Text(timerInterval: Date()...end, countsDown: true)
-        } else {
-            Text(verbatim: "0:00")
+        Group {
+            if let paused = state.restPausedRemaining {
+                Text(verbatim: format(paused))
+            } else if let end = state.restEnd, end > Date() {
+                Text(timerInterval: Date()...end, countsDown: true)
+            } else {
+                Text(verbatim: "0:00")
+            }
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
     }
 }
 

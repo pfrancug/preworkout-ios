@@ -92,11 +92,13 @@ struct SettingsView: View {
         }
         .navigationTitle("Ustawienia")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Wylogować się?", isPresented: $confirmLogout, titleVisibility: .visible) {
+        .alert("Wylogować się?", isPresented: $confirmLogout) {
             Button("Wyloguj", role: .destructive) { Task { await appState.logout() } }
+            Button("Anuluj", role: .cancel) {}
         }
-        .confirmationDialog("Usunąć konto?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .alert("Usunąć konto?", isPresented: $confirmDelete) {
             Button("Usuń trwale", role: .destructive) { Task { await deleteAccount() } }
+            Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Wszystkie Twoje dane zostaną trwale usunięte. Tej operacji nie można cofnąć.")
         }
