@@ -3864,6 +3864,26 @@
         }
       }
     },
+    "Wstrzymano %lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused %lld/%lld"
+          }
+        }
+      }
+    },
+    "Wstrzymano. Wznowi się po powrocie do aplikacji": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused. It will resume when you return to the app"
+          }
+        }
+      }
+    },
     "Wszystkie Twoje dane zostaną trwale usunięte. Tej operacji nie można cofnąć.": {
       "localizations": {
         "en": {
@@ -4060,6 +4080,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move up"
+          }
+        }
+      }
+    },
+    "Wznowiono synchronizację…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumed sync…"
           }
         }
       }

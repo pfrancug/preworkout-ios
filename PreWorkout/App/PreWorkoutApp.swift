@@ -24,7 +24,10 @@ struct PreWorkoutApp: App {
                 }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Outbox.shared.flush() }
+            if phase == .active {
+                Outbox.shared.flush()
+                Task { await HealthWeightSync.shared.resumeIfNeeded(person: appState.activePersonId) }
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ struct WeightView: View {
     @State private var editor: WeightEditor?
     @State private var pendingDelete: DiaryRow?
     @State private var error: String?
-    @State private var health = HealthWeightSync()
+    @State private var health = HealthWeightSync.shared
     @State private var loaded = false
     @State private var visibleEntryCount = 10
 
@@ -140,8 +140,11 @@ struct WeightView: View {
         }
         .refreshable { await load(sync: true) }
         .onReceive(NotificationCenter.default.publisher(for: .outboxFlushed)) { _ in Task { await load() } }
+        .onReceive(NotificationCenter.default.publisher(for: .healthSyncDidUpdate)) { _ in
+            Task { await refreshRows() }
+        }
         .onChange(of: health.lastError) { _, newValue in
-            if let newValue { error = newValue }
+            error = newValue
         }
     }
 
@@ -152,6 +155,19 @@ struct WeightView: View {
                 if progress.phase == .done {
                     Label("Zsynchronizowano", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
+                } else if progress.phase == .paused {
+                    Label(
+                        "Wstrzymano. Wznowi się po powrocie do aplikacji",
+                        systemImage: "pause.circle"
+                    )
+                    .foregroundStyle(.secondary)
+                    if progress.total > 0 {
+                        ProgressView(value: progress.fraction)
+                        Text(progressLabel(progress))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
                 } else if progress.total > 0 {
                     ProgressView(value: progress.fraction)
                     Text(progressLabel(progress))
@@ -177,10 +193,17 @@ struct WeightView: View {
         switch progress.phase {
         case .reading:
             return String(localized: "Wczytywanie z Health…")
+        case .resuming:
+            return String(localized: "Wznowiono synchronizację…")
         case .importing:
             return String(localized: "Importowanie \(done)/\(total)")
         case .writing:
             return String(localized: "Zapisywanie do Health \(done)/\(total)")
+        case .paused:
+            if total > 0 {
+                return String(localized: "Wstrzymano \(done)/\(total)")
+            }
+            return String(localized: "Wstrzymano. Wznowi się po powrocie do aplikacji")
         case .done:
             return String(localized: "Zsynchronizowano")
         }
@@ -334,6 +357,15 @@ struct WeightView: View {
         return (String(localized: "Waga"), data[data.count - 1].trend)
     }
 
+    private func refreshRows() async {
+        let person = appState.activePersonId
+        do {
+            rows = try await APIClient.shared.diary(person: person)
+        } catch {
+            guard !Task.isCancelled else { return }
+        }
+    }
+
     private func load(sync: Bool = false) async {
         let person = appState.activePersonId
         if rows.isEmpty, let cached: [DiaryRow] = DiskCache.read("diary", person: person) {
@@ -342,6 +374,7 @@ struct WeightView: View {
         do {
             rows = try await APIClient.shared.diary(person: person)
             loaded = true
+            if health.busy { return }
             if sync, HealthWeightSync.isAvailable, health.canShare {
                 await syncHealth()
             } else if !sync, health.canShare, loaded {
