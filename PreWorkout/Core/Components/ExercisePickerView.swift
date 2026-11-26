@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Sheet: pick one exercise from the library (server full-text search).
 struct ExercisePickerView: View {
@@ -6,6 +7,7 @@ struct ExercisePickerView: View {
 
     @Environment(ExerciseStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismissSearch) private var dismissSearch
     @State private var query = ""
     @State private var results: [Exercise]?
     @State private var searching = false
@@ -18,8 +20,7 @@ struct ExercisePickerView: View {
                 }
                 ForEach(visible) { exercise in
                     Button {
-                        onPick(exercise)
-                        dismiss()
+                        pick(exercise)
                     } label: {
                         ExerciseRow(exercise: exercise)
                     }
@@ -39,7 +40,7 @@ struct ExercisePickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Anuluj") { dismiss() }
+                    Button("Anuluj") { close() }
                 }
             }
             .task { await store.loadIfNeeded() }
@@ -47,11 +48,17 @@ struct ExercisePickerView: View {
         }
     }
 
+    /// Unique by id: a search hit can appear twice (name + alias) and ForEach
+    /// would otherwise get duplicate identities.
     private var visible: [Exercise] {
+        let list: [Exercise]
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
-            return store.enabled.filter { !$0.archived }
+            list = store.enabled.filter { !$0.archived }
+        } else {
+            list = (results ?? localMatches).filter(store.isEnabled)
         }
-        return (results ?? localMatches).filter(store.isEnabled)
+        var seen = Set<String>()
+        return list.filter { seen.insert($0.id).inserted }
     }
 
     private var localMatches: [Exercise] {
@@ -61,6 +68,29 @@ struct ExercisePickerView: View {
                 $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil).contains(q)
             }
         }
+    }
+
+    /// Dismissing this sheet while the search keyboard is still first responder
+    /// crashes on iOS 26/27 (UIKeyboardLayoutGuide Auto Layout). Hide the
+    /// keyboard first, then dismiss after the keyboard animation starts.
+    private func pick(_ exercise: Exercise) {
+        resignKeyboard()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            onPick(exercise)
+            dismiss()
+        }
+    }
+
+    private func close() {
+        resignKeyboard()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            dismiss()
+        }
+    }
+
+    private func resignKeyboard() {
+        dismissSearch()
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     private func search() async {
@@ -73,7 +103,8 @@ struct ExercisePickerView: View {
         do {
             let refs = try await APIClient.shared.searchExercises(q)
             guard !Task.isCancelled else { return }
-            results = refs.compactMap { store.byId[$0.id] }
+            var seen = Set<String>()
+            results = refs.compactMap { store.byId[$0.id] }.filter { seen.insert($0.id).inserted }
         } catch {
             // Offline / failed search: fall back to local matching.
             if !Task.isCancelled { results = nil }

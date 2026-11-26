@@ -324,13 +324,14 @@ struct LiveWorkoutView: View {
         )
     }
 
+    @ViewBuilder
     private func activeStage(_ session: LiveSession, now: Double, mood: LiveMood) -> some View {
+        if let e = session.currentExercise {
         let index = session.current
-        let e = session.exercises[index]
         let done = e.item.sets.count
         let planned = max(e.plannedSets, done + 1)
         let setNumber = done + 1
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             VStack(spacing: 0) {
                 title(session, e, index: index)
                 Spacer(minLength: 16)
@@ -358,6 +359,7 @@ struct LiveWorkoutView: View {
             }
             .browsable(browseGesture(session))
             doneStrip(e, index: index, planned: planned, mood: mood)
+        }
         }
     }
 
@@ -631,10 +633,11 @@ struct LiveWorkoutView: View {
 
     // MARK: Session block
 
+    @ViewBuilder
     private func sessionStage(_ session: LiveSession, now: Double) -> some View {
-        let e = session.currentExercise!
+        if let e = session.currentExercise {
         let elapsed = Double(e.pending.durationSeconds ?? 0) + (session.setTimer?.elapsed(now) ?? 0)
-        return SessionStage(
+        SessionStage(
             name: live.name(of: e),
             elapsed: elapsed,
             running: session.setTimer != nil,
@@ -665,19 +668,21 @@ struct LiveWorkoutView: View {
                 }
             }
         )
+        }
     }
 
     // MARK: Complete / empty
 
+    @ViewBuilder
     private func completeStage(_ session: LiveSession) -> some View {
+        if let e = session.currentExercise {
         let index = session.current
-        let e = session.exercises[index]
         let allDone = session.nextOpenIndex(after: index) == nil
         let sets = e.item.sets
         let count = sets.count
         let reps = sets.reduce(0) { $0 + ($1.reps ?? 0) }
         let best = sets.compactMap(\.weightKg).max() ?? 0
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 0) {
                 if e.status == .skipped {
@@ -755,6 +760,7 @@ struct LiveWorkoutView: View {
                 )
             }
         }
+        }
     }
 
     private var emptyStage: some View {
@@ -796,7 +802,7 @@ struct LiveWorkoutView: View {
                       icon: allDone ? "flag.checkered" : "arrow.right") {
                 live.tap()
                 if allDone {
-                    if session.exercises[index].isOpen { live.update { s, t in s.finishExercise(index, t) } }  // finishExercise guards the index
+                    if session.exercises[safe: index]?.isOpen == true { live.update { s, t in s.finishExercise(index, t) } }
                     requestFinish()
                 } else {
                     forward = true
@@ -816,12 +822,13 @@ struct LiveWorkoutView: View {
         }
     }
 
+    @ViewBuilder
     private func sessionDock(_ session: LiveSession, now: Double, mood: LiveMood) -> some View {
+        if let e = session.currentExercise {
         let index = session.current
-        let e = session.exercises[index]
         let elapsed = Double(e.pending.durationSeconds ?? 0) + (session.setTimer?.elapsed(now) ?? 0)
         let canFinish = elapsed >= 1
-        return VStack(spacing: 6) {
+        VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 22) {
                 SideButton(icon: "forward.end", label: Text("Pomiń")) {
                     live.tap()
@@ -849,16 +856,18 @@ struct LiveWorkoutView: View {
             }
             Color.clear.frame(height: 28)
         }
+        }
     }
 
+    @ViewBuilder
     private func activeDock(_ session: LiveSession) -> some View {
+        if let e = session.currentExercise {
         let index = session.current
-        let e = session.exercises[index]
         let field = timerField(e)
         let running = session.setTimer != nil
         let needsStart = field != nil && !running && timedKey != stopKey(e)
         let setNumber = e.item.sets.count + 1
-        return VStack(spacing: 6) {
+        VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 22) {
                 SideButton(icon: e.item.sets.isEmpty ? "forward.end" : "flag", label: e.item.sets.isEmpty ? Text("Pomiń") : Text("Koniec")) {
                     if running && field != nil {
@@ -913,6 +922,7 @@ struct LiveWorkoutView: View {
                 }
             }
             .frame(height: 28)
+        }
         }
     }
 
@@ -1020,7 +1030,7 @@ struct LiveWorkoutView: View {
                 let previous = s.current
                 s.current = first
                 s.addExercise(exercise.id, mode: .superset, defaultRest: live.defaultRest)
-                s.current = min(previous, s.exercises.count - 1)
+                s.current = s.exercises.isEmpty ? 0 : min(max(previous, 0), s.exercises.count - 1)
             } else {
                 s.addExercise(exercise.id, mode: mode, defaultRest: live.defaultRest, asSession: asSession)
             }
