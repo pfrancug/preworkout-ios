@@ -463,6 +463,19 @@ EN = {
     "1 próba": "1 attempt",
     "%lld próby": "%lld attempts",
     "%lld prób": "%lld attempts",
+    "Stoper": "Stopwatch",
+    "Odliczanie": "Countdown",
+    "Ręcznie": "Manual",
+    "Tryb timera": "Timer mode",
+    "Domyślny tryb timera": "Default timer mode",
+    "Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.": "Used when an exercise does not yet have a remembered mode.",
+    "Czas minął": "Time's up",
+    "Kontynuuj albo zatrzymaj serię.": "Keep going or stop the set.",
+    "%@. Kontynuuj albo zatrzymaj serię.": "%@. Keep going or stop the set.",
+    "Po czasie": "Overtime",
+    "Start odliczania": "Start countdown",
+    "Czas odliczania": "Countdown time",
+
 }
 
 # Plural keys: Polish forms (one/few/many/other) and English (one/other).

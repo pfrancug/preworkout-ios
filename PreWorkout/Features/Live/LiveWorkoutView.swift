@@ -257,6 +257,14 @@ struct LiveWorkoutView: View {
             .pickerStyle(.menu)
             Toggle(isOn: $store.haptics) { Label("Wibracje", systemImage: "iphone.radiowaves.left.and.right") }
             Toggle(isOn: $store.sound) { Label("Dźwięk na koniec przerwy", systemImage: "speaker.wave.2") }
+            Picker(selection: $store.defaultTimerMode) {
+                ForEach(TimedSetMode.allCases) { mode in
+                    Text(verbatim: mode.title).tag(mode)
+                }
+            } label: {
+                Label("Domyślny tryb timera", systemImage: "stopwatch")
+            }
+            .pickerStyle(.menu)
             Divider()
             Button("Porzuć trening", systemImage: "trash", role: .destructive) { confirmDiscard = true }
         } label: {
@@ -369,51 +377,15 @@ struct LiveWorkoutView: View {
         if e.item.sequence.count > 1 {
             comboHero(session, e, index: index, now: now)
         } else if let field = timerField(e) {
-            let running = session.setTimer
-            let target = field == .hold ? holdTarget(e) : nil
-            let recorded: Double? = field == .hold ? e.pending.holdSeconds : e.pending.durationSeconds.map(Double.init)
-            let sec = running?.elapsed(now) ?? 0
-            let reached = running != nil && target.map { sec >= $0 } == true
-            let progress: Double = running == nil ? (timedKey == stopKey(e) ? 1 : 0) : target.map { sec / max($0, 1) } ?? sec.truncatingRemainder(dividingBy: 60) / 60
-            VStack(spacing: 14) {
-                LVRing(size: 240, stroke: 12, progress: reached ? 1 : progress,
-                       from: reached || timedKey == stopKey(e) ? LV.lime : LV.gold,
-                       to: reached || timedKey == stopKey(e) ? LV.sky : LV.flame) {
-                    Group {
-                        if running != nil {
-                            if reached { Text("Cel osiągnięty") } else if field == .hold { Text("Trzymasz") } else { Text("Trwa") }
-                        } else if timedKey == stopKey(e) {
-                            Text("Twój czas")
-                        } else if field == .hold {
-                            Text("Cel utrzymania")
-                        } else {
-                            Text("Na czas")
-                        }
-                    }
-                    .lvCaps()
-                    Text(verbatim: Clock.text(running != nil ? sec.rounded(.down) : (recorded ?? target ?? 0)))
-                        .font(.system(size: 64, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .contentTransition(.numericText())
-                        .foregroundStyle(reached ? AnyShapeStyle(LV.lime) : AnyShapeStyle(LV.text))
-                        .padding(.top, 2)
-                    if running != nil, let target {
-                        Text(verbatim: "/ \(Clock.text(target))").font(.system(size: 14)).foregroundStyle(LV.muted).monospacedDigit()
-                    }
-                }
-                if running == nil {
-                    HStack(spacing: 10) {
-                        ForEach(SetField.primary(measurement(e)).filter { $0 != .hold && $0 != .duration }) { f in
-                            LVInlineStepper(field: f, set: pending)
-                        }
-                        if measurement(e) == "hold" && (e.pending.weightKg ?? 0) > 0 {
-                            LVInlineStepper(field: .weight, set: pending)
-                        }
-                    }
-                }
-            }
+            TimedSetHero(
+                session: session,
+                exercise: e,
+                field: field,
+                measurement: measurement(e),
+                now: now,
+                pending: pending,
+                timedJustFinished: timedKey == stopKey(e)
+            )
         } else {
             let primary = SetField.primary(measurement(e))
             let main = primary.first ?? .reps
@@ -471,14 +443,23 @@ struct LiveWorkoutView: View {
 
     private func comboHero(_ session: LiveSession, _ e: LiveExercise, index: Int, now: Double) -> some View {
         let running = session.setTimer
+        let mode = live.timerMode(for: e.item.exerciseId)
         return VStack(spacing: 14) {
+            TimerModePicker(mode: comboModeBinding(e), enabled: running == nil)
+            if mode == .countdown, running == nil {
+                CountdownTargetEditor(seconds: Binding(
+                    get: { live.countdownPrefill(for: e, field: .hold) },
+                    set: { live.setCountdownTarget($0, for: e.item.exerciseId) }
+                ))
+            }
             ComboStepList(
                 sequence: e.item.sequence,
                 steps: e.pending.steps,
                 nameOf: { library.byId[$0]?.name ?? $0 },
                 measurementOf: measureId,
                 runningIndex: timedStep?.index,
-                runningSeconds: running.map { $0.elapsed(now) },
+                runningSeconds: running.map { $0.displaySeconds(now) },
+                runningOvertime: running?.isOvertime(now) == true,
                 onAdjust: { stepIndex, field, up in
                     live.update { s, _ in
                         guard s.exercises.indices.contains(index) else { return }
@@ -490,10 +471,10 @@ struct LiveWorkoutView: View {
                         }
                     }
                 },
-                onToggleTimer: { stepIndex, field in
+                onToggleTimer: mode == .manual ? nil : { stepIndex, field in
                     if let timed = timedStep, timed.index == stepIndex, session.setTimer != nil {
                         live.update { s, t in
-                            let seconds = max(1, (s.setTimer?.elapsed(t) ?? 0).rounded())
+                            let seconds = Double(s.setTimer?.recordedSeconds(t) ?? 1)
                             guard s.exercises.indices.contains(index) else { return }
                             var steps = s.exercises[index].pending.steps
                             if steps.indices.contains(stepIndex) {
@@ -505,9 +486,15 @@ struct LiveWorkoutView: View {
                         }
                         timedStep = nil
                     } else {
-                        let target = e.pending.steps[safe: stepIndex].flatMap { field.stepValue($0) }
+                        let countsDown = mode == .countdown
+                        let target = countsDown
+                            ? live.countdownPrefill(for: e, field: field == .duration ? .duration : .hold)
+                            : e.pending.steps[safe: stepIndex].flatMap { field.stepValue($0) }
+                        if countsDown, let target {
+                            live.setCountdownTarget(target, for: e.item.exerciseId)
+                        }
                         timedStep = (index: stepIndex, field: field)
-                        live.update { s, t in s.startSetTimer(t, target: target) }
+                        live.update { s, t in s.startSetTimer(t, target: target, countsDown: countsDown) }
                     }
                 }
             )
@@ -865,7 +852,8 @@ struct LiveWorkoutView: View {
         let index = session.current
         let field = timerField(e)
         let running = session.setTimer != nil
-        let needsStart = field != nil && !running && timedKey != stopKey(e)
+        let mode = field != nil ? live.timerMode(for: e.item.exerciseId) : nil
+        let needsStart = field != nil && !running && timedKey != stopKey(e) && mode != .manual
         let setNumber = e.item.sets.count + 1
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 22) {
@@ -884,9 +872,8 @@ struct LiveWorkoutView: View {
                 }
                 VStack(spacing: 8) {
                     if needsStart {
-                        LVOrb(mood: .active, label: "Start stopera") {
-                            live.tap()
-                            live.update { s, t in s.startSetTimer(t, target: field == .hold ? holdTarget(e) : nil) }
+                        LVOrb(mood: .active, label: LocalizedStringKey(mode == .countdown ? "Start odliczania" : "Start stopera")) {
+                            startSetTimer(e, field: field)
                         } content: {
                             Image(systemName: "play.fill").font(.system(size: 38)).offset(x: 3)
                         }
@@ -906,14 +893,20 @@ struct LiveWorkoutView: View {
                         }
                     }
                     Group {
-                        if needsStart { Text("Start stopera") } else if running { Text("Stop i zapisz") } else { Text("Zakończ serię \(setNumber)") }
+                        if needsStart {
+                            if mode == .countdown { Text("Start odliczania") } else { Text("Start stopera") }
+                        } else if running {
+                            Text("Stop i zapisz")
+                        } else {
+                            Text("Zakończ serię \(setNumber)")
+                        }
                     }
                     .font(.system(size: 14, weight: .bold))
                 }
                 SideButton(icon: "list.number", label: Text("Lista")) { sheet = .queue }
             }
             Group {
-                if needsStart {
+                if needsStart, mode != .countdown {
                     Button { sheet = .log(.log, index: index, setIndex: e.item.sets.count) } label: {
                         Text("Zapisz bez stopera").font(.system(size: 13, weight: .medium)).foregroundStyle(LV.muted)
                     }
@@ -963,12 +956,32 @@ struct LiveWorkoutView: View {
 
     // MARK: Actions
 
+    private func comboModeBinding(_ e: LiveExercise) -> Binding<TimedSetMode> {
+        Binding(
+            get: { live.timerMode(for: e.item.exerciseId) },
+            set: { live.setTimerMode($0, for: e.item.exerciseId) }
+        )
+    }
+
+    private func startSetTimer(_ e: LiveExercise, field: LiveSession.TimerField?) {
+        live.tap()
+        let mode = live.timerMode(for: e.item.exerciseId)
+        if mode == .countdown {
+            live.prepareCountdownNotifications()
+            let target = live.countdownPrefill(for: e, field: field ?? .hold)
+            live.setCountdownTarget(target, for: e.item.exerciseId)
+            live.update { s, t in s.startSetTimer(t, target: target, countsDown: true) }
+        } else {
+            live.update { s, t in s.startSetTimer(t, target: field == .hold ? holdTarget(e) : nil, countsDown: false) }
+        }
+    }
+
     private func logSet(index: Int) {
         guard let e = live.session?.exercises[safe: index] else { return }
         let field = timerField(e)
         live.update { s, t in
             if e.item.sequence.count > 1, let timed = timedStep, s.setTimer != nil {
-                let seconds = max(1, (s.setTimer?.elapsed(t) ?? 0).rounded())
+                let seconds = Double(s.setTimer?.recordedSeconds(t) ?? 1)
                 if s.exercises.indices.contains(index) {
                     var steps = s.exercises[index].pending.steps
                     if steps.indices.contains(timed.index) {

@@ -31,6 +31,16 @@
         }
       }
     },
+    "%@. Kontynuuj albo zatrzymaj serię.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. Keep going or stop the set."
+          }
+        }
+      }
+    },
     "%@–%@": {
       "shouldTranslate": false
     },
@@ -732,12 +742,32 @@
         }
       }
     },
+    "Czas minął": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time's up"
+          }
+        }
+      }
+    },
     "Czas na serię: %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Time for your set: %@"
+          }
+        }
+      }
+    },
+    "Czas odliczania": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Countdown time"
           }
         }
       }
@@ -1008,6 +1038,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Default rest"
+          }
+        }
+      }
+    },
+    "Domyślny tryb timera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default timer mode"
           }
         }
       }
@@ -1672,6 +1712,16 @@
         }
       }
     },
+    "Kontynuuj albo zatrzymaj serię.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep going or stop the set."
+          }
+        }
+      }
+    },
     "Lekkie lub umiarkowane ćwiczenia 4–5 dni w tygodniu": {
       "localizations": {
         "en": {
@@ -2235,6 +2285,16 @@
         }
       }
     },
+    "Odliczanie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Countdown"
+          }
+        }
+      }
+    },
     "Odrzucić zmiany?": {
       "localizations": {
         "en": {
@@ -2361,6 +2421,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Calorie plan"
+          }
+        }
+      }
+    },
+    "Po czasie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overtime"
           }
         }
       }
@@ -2904,6 +2974,16 @@
         }
       }
     },
+    "Ręcznie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual"
+          }
+        }
+      }
+    },
     "Seria %lld": {
       "localizations": {
         "en": {
@@ -3044,6 +3124,16 @@
         }
       }
     },
+    "Start odliczania": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start countdown"
+          }
+        }
+      }
+    },
     "Start stopera": {
       "localizations": {
         "en": {
@@ -3070,6 +3160,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop & save"
+          }
+        }
+      }
+    },
+    "Stoper": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopwatch"
           }
         }
       }
@@ -3310,6 +3410,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Permanently deletes your account along with all profiles, logs and custom exercises."
+          }
+        }
+      }
+    },
+    "Tryb timera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer mode"
           }
         }
       }
@@ -3650,6 +3760,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fill them in to see your needs and pick a calorie plan."
+          }
+        }
+      }
+    },
+    "Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used when an exercise does not yet have a remembered mode."
           }
         }
       }

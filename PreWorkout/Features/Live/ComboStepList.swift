@@ -8,6 +8,7 @@ struct ComboStepList: View {
     let measurementOf: (String) -> String
     var runningIndex: Int? = nil
     var runningSeconds: Double? = nil
+    var runningOvertime = false
     var onAdjust: (Int, SetField, Bool) -> Void
     var onToggleTimer: ((Int, SetField) -> Void)? = nil
 
@@ -42,6 +43,7 @@ struct ComboStepList: View {
                 .minimumScaleFactor(0.6)
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .monospacedDigit()
+                .foregroundStyle(running && runningOvertime ? LV.flame : LV.text)
                 .frame(minWidth: 64)
                 .contentTransition(.numericText())
             LVStepButton(up: true, size: 44, disabled: (value ?? 0) >= field.range.upperBound) {

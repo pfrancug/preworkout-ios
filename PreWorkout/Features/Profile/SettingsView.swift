@@ -4,6 +4,7 @@ import UIKit
 /// App settings: account (Apple link, sign-out, account deletion), language, server, version.
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(LiveStore.self) private var live
     @State private var confirmLogout = false
     @State private var confirmDelete = false
     @State private var busy = false
@@ -12,7 +13,8 @@ struct SettingsView: View {
     @State private var appleRunner = AppleSignInRunner()
 
     var body: some View {
-        Form {
+        @Bindable var store = live
+        return Form {
             if let account = appState.account {
                 Section {
                     if let email = account.email, !email.isEmpty {
@@ -65,6 +67,16 @@ struct SettingsView: View {
                 .tint(.primary)
             } footer: {
                 Text("Język zmienisz w Ustawieniach iOS › PreWorkout › Język.")
+            }
+
+            Section("Trening na żywo") {
+                Picker("Domyślny tryb timera", selection: $store.defaultTimerMode) {
+                    ForEach(TimedSetMode.allCases) { mode in
+                        Text(verbatim: mode.title).tag(mode)
+                    }
+                }
+            } footer: {
+                Text("Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.")
             }
 
             Section("Aplikacja") {

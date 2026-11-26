@@ -26,6 +26,9 @@ final class LiveStore {
     var sound: Bool {
         didSet { UserDefaults.standard.set(sound, forKey: Keys.sound) }
     }
+    var defaultTimerMode: TimedSetMode {
+        didSet { UserDefaults.standard.set(defaultTimerMode.rawValue, forKey: Keys.defaultTimerMode) }
+    }
 
     /// Exercise name lookup (set by the app from the exercise library).
     @ObservationIgnored var exerciseName: @MainActor (String) -> String = { $0 }
@@ -34,12 +37,17 @@ final class LiveStore {
         static let defaultRest = "preworkout.live.defaultRest"
         static let haptics = "preworkout.live.haptics"
         static let sound = "preworkout.live.sound"
+        static let defaultTimerMode = "preworkout.live.timerMode.default"
+        static let timerMode = "preworkout.live.timerMode."
+        static let countdownTarget = "preworkout.live.countdownTarget."
+        static let askedNotifications = "preworkout.live.askedNotifications"
     }
 
-    private static let restNotificationId = "preworkout.rest"
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var hydrated: Set<String> = []
     @ObservationIgnored private var scheduledRest: String?
+    @ObservationIgnored private var scheduledSetTimer: String?
+    @ObservationIgnored private let notificationSilencer = ForegroundNotificationSilencer()
     @ObservationIgnored private var activity: Activity<WorkoutActivityAttributes>?
     @ObservationIgnored private var lastContent: WorkoutActivityAttributes.ContentState?
     private let api: APIClient
@@ -50,7 +58,70 @@ final class LiveStore {
         defaultRest = d.object(forKey: Keys.defaultRest) as? Int ?? LiveSession.defaultRestSeconds
         haptics = d.object(forKey: Keys.haptics) as? Bool ?? true
         sound = d.object(forKey: Keys.sound) as? Bool ?? true
+        if let raw = d.string(forKey: Keys.defaultTimerMode), let mode = TimedSetMode(rawValue: raw) {
+            defaultTimerMode = mode
+        } else {
+            defaultTimerMode = .stopwatch
+        }
         activity = Activity<WorkoutActivityAttributes>.activities.first
+        UNUserNotificationCenter.current().delegate = notificationSilencer
+    }
+
+    // MARK: Timer mode
+
+    func timerMode(for exerciseId: String) -> TimedSetMode {
+        if let raw = UserDefaults.standard.string(forKey: Keys.timerMode + exerciseId),
+           let mode = TimedSetMode(rawValue: raw) {
+            return mode
+        }
+        return defaultTimerMode
+    }
+
+    func setTimerMode(_ mode: TimedSetMode, for exerciseId: String) {
+        UserDefaults.standard.set(mode.rawValue, forKey: Keys.timerMode + exerciseId)
+        if mode == .countdown { prepareCountdownNotifications() }
+    }
+
+    func savedCountdownTarget(for exerciseId: String) -> Double? {
+        guard UserDefaults.standard.object(forKey: Keys.countdownTarget + exerciseId) != nil else { return nil }
+        let value = UserDefaults.standard.double(forKey: Keys.countdownTarget + exerciseId)
+        guard Limits.durationSeconds.contains(value), value >= 1 else { return nil }
+        return value
+    }
+
+    func setCountdownTarget(_ seconds: Double, for exerciseId: String) {
+        UserDefaults.standard.set(Limits.durationSeconds.clamp(max(1, seconds)), forKey: Keys.countdownTarget + exerciseId)
+    }
+
+    /// Remembered goal first, then the previous set, plan hold target, pending value, seed.
+    func countdownPrefill(for e: LiveExercise, field: LiveSession.TimerField) -> Double {
+        if let saved = savedCountdownTarget(for: e.item.exerciseId) { return saved }
+        if let last = e.item.sets.last {
+            if field == .hold, let value = last.holdSeconds, value >= 1 {
+                return Limits.durationSeconds.clamp(value)
+            }
+            if field == .duration, let value = last.durationSeconds, value >= 1 {
+                return Limits.durationSeconds.clamp(Double(value))
+            }
+        }
+        if field == .hold, let target = e.target?["targetHoldMax"] ?? e.target?["targetHoldMin"], target >= 1 {
+            return Limits.durationSeconds.clamp(target)
+        }
+        if field == .hold, let pending = e.pending.holdSeconds, pending >= 1 {
+            return Limits.durationSeconds.clamp(pending)
+        }
+        if field == .duration, let pending = e.pending.durationSeconds, pending >= 1 {
+            return Limits.durationSeconds.clamp(Double(pending))
+        }
+        return field == .hold ? SetField.hold.seed : SetField.duration.seed
+    }
+
+    /// Prompt once, the first time the user picks or starts a countdown.
+    /// Denial is fine: in-app sound still plays in the foreground.
+    func prepareCountdownNotifications() {
+        guard UserDefaults.standard.object(forKey: Keys.askedNotifications) == nil else { return }
+        UserDefaults.standard.set(true, forKey: Keys.askedNotifications)
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     // MARK: Lifecycle
@@ -78,7 +149,6 @@ final class LiveStore {
         session = fresh
         afterChange()
         Analytics.send("Workout.liveStarted")
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     /// Applies a change with the current time and persists it.
@@ -167,6 +237,7 @@ final class LiveStore {
         updateTicker()
         updateIdleTimer()
         scheduleRestNotification()
+        scheduleSetTimerNotification()
         updateActivity()
     }
 
@@ -197,8 +268,11 @@ final class LiveStore {
             signal()
             update { s, _ in s.rest?.alerted = true }
         }
-        if let t = s.setTimer, !t.alerted, let target = t.targetSec, t.elapsed(now) >= target {
-            signal()
+        if let t = s.setTimer, t.shouldAlert(now) {
+            // If we returned after the background notification already fired,
+            // don't play the in-app signal a second time.
+            let late = t.elapsed(now) - (t.targetSec ?? 0) >= 1.5
+            if !late { signal() }
             update { s, _ in s.setTimer?.alerted = true }
         }
     }
@@ -209,7 +283,7 @@ final class LiveStore {
         let now = LiveSession.nowMs
         guard let s = session, let r = s.rest, !s.isPaused, !r.alerted, r.remaining(now) > 1 else {
             if scheduledRest != nil {
-                center.removePendingNotificationRequests(withIdentifiers: [Self.restNotificationId])
+                center.removePendingNotificationRequests(withIdentifiers: [PhaseNotification.restId])
                 scheduledRest = nil
             }
             return
@@ -224,8 +298,36 @@ final class LiveStore {
         }
         content.sound = sound ? .default : nil
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: r.remaining(now), repeats: false)
-        center.removePendingNotificationRequests(withIdentifiers: [Self.restNotificationId])
-        center.add(UNNotificationRequest(identifier: Self.restNotificationId, content: content, trigger: trigger))
+        center.removePendingNotificationRequests(withIdentifiers: [PhaseNotification.restId])
+        center.add(UNNotificationRequest(identifier: PhaseNotification.restId, content: content, trigger: trigger))
+    }
+
+    /// Local notification at the absolute end of a set countdown (lock screen / background).
+    private func scheduleSetTimerNotification() {
+        guard let s = session, let t = s.setTimer, t.countsDown, !s.isPaused, !t.alerted,
+              let end = t.endDate(), end.timeIntervalSinceNow > 1 else {
+            if scheduledSetTimer != nil {
+                PhaseNotification.cancel(id: PhaseNotification.setTimerId)
+                scheduledSetTimer = nil
+            }
+            return
+        }
+        let key = "\(t.startedAt)-\(t.targetSec ?? 0)-\(end.timeIntervalSince1970)"
+        guard key != scheduledSetTimer else { return }
+        scheduledSetTimer = key
+        let body: String
+        if let e = s.currentExercise {
+            body = String(localized: "\(name(of: e)). Kontynuuj albo zatrzymaj serię.")
+        } else {
+            body = String(localized: "Kontynuuj albo zatrzymaj serię.")
+        }
+        PhaseNotification.schedule(
+            id: PhaseNotification.setTimerId,
+            at: end,
+            title: String(localized: "Czas minął"),
+            body: body,
+            sound: sound
+        )
     }
 
     func name(of e: LiveExercise) -> String {
@@ -253,13 +355,34 @@ final class LiveStore {
             let total = max(e.plannedSets, n)
             detail = String(localized: "Seria \(n) z \(total)")
         }
+        var setStopwatchStart: Date?
+        var setCountdownEnd: Date?
+        var setOvertimeStart: Date?
+        var setPausedSeconds: Int?
+        if let t = s.setTimer {
+            if s.isPaused || t.pausedElapsed != nil {
+                setPausedSeconds = t.displaySeconds(now).safeInt
+            } else if t.countsDown, let end = t.endDate() {
+                if t.isOvertime(now) {
+                    setOvertimeStart = end
+                } else {
+                    setCountdownEnd = end
+                }
+            } else {
+                setStopwatchStart = date(t.startedAt)
+            }
+        }
         return .init(
             clockStart: date(s.startedAt + s.pausedMs),
             pausedElapsed: s.isPaused ? (s.elapsedMs(now) / 1000).safeInt : nil,
             restEnd: restEnd,
             restPausedRemaining: restPaused,
             exercise: exercise,
-            detail: detail
+            detail: detail,
+            setStopwatchStart: setStopwatchStart,
+            setCountdownEnd: setCountdownEnd,
+            setOvertimeStart: setOvertimeStart,
+            setPausedSeconds: setPausedSeconds
         )
     }
 

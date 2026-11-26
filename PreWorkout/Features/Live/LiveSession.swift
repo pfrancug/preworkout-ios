@@ -141,25 +141,6 @@ struct LiveRest: Codable, Hashable {
     }
 }
 
-struct LiveSetTimer: Codable, Hashable {
-    var startedAt: Double
-    var pausedElapsed: Double?
-    var targetSec: Double?
-    var alerted: Bool
-
-    func elapsed(_ now: Double) -> Double { pausedElapsed ?? max(0, (now - startedAt) / 1000) }
-
-    private enum CodingKeys: String, CodingKey { case startedAt, pausedElapsed, targetSec, alerted }
-    init(startedAt: Double, targetSec: Double?) {
-        self.startedAt = startedAt; self.targetSec = targetSec; pausedElapsed = nil; alerted = false
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(startedAt, forKey: .startedAt); try c.encode(pausedElapsed, forKey: .pausedElapsed)
-        try c.encode(targetSec, forKey: .targetSec); try c.encode(alerted, forKey: .alerted)
-    }
-}
-
 struct LiveSession: Codable, Hashable {
     static let defaultRestSeconds = 90
     static let restStep = 15
@@ -537,7 +518,7 @@ struct LiveSession: Codable, Hashable {
         guard exercises.indices.contains(current) else { return }
         closeRest(now)
         if exercises[current].startedAt == nil { exercises[current].startedAt = now }
-        setTimer = LiveSetTimer(startedAt: now, targetSec: nil)
+        setTimer = LiveSetTimer(startedAt: now, targetSec: nil, countsDown: false)
     }
 
     /// Saves the session as one duration set (no rest) and moves on.
@@ -590,15 +571,15 @@ struct LiveSession: Codable, Hashable {
         rest = r
     }
 
-    mutating func startSetTimer(_ now: Double, target: Double?) {
+    mutating func startSetTimer(_ now: Double, target: Double?, countsDown: Bool = false) {
         closeRest(now)
-        setTimer = LiveSetTimer(startedAt: now, targetSec: target)
+        setTimer = LiveSetTimer(startedAt: now, targetSec: target, countsDown: countsDown)
     }
 
-    /// Stops the set timer and puts the time into the pending set.
+    /// Stops the set timer and puts the actual elapsed time into the pending set.
     mutating func stopSetTimer(_ now: Double, field: TimerField) {
         guard let t = setTimer else { return }
-        let seconds = max(1, t.elapsed(now).safeInt)
+        let seconds = t.recordedSeconds(now)
         setTimer = nil
         guard exercises.indices.contains(current) else { return }
         switch field {
@@ -636,7 +617,7 @@ struct LiveSession: Codable, Hashable {
         if setTimer != nil {
             if exercises[index].item.sequence.count > 1, let combo = comboStep,
                exercises[index].pending.steps.indices.contains(combo.index) {
-                let seconds = max(1, (setTimer?.elapsed(now) ?? 0).rounded())
+                let seconds = Double((setTimer?.recordedSeconds(now) ?? 1))
                 var steps = exercises[index].pending.steps
                 combo.field.putStep(seconds, into: &steps[combo.index])
                 exercises[index].pending.steps = steps
