@@ -10,7 +10,6 @@ struct LiveWorkoutView: View {
 
     @State private var sheet: SheetKind?
     @State private var picking = false
-    @State private var picked: Exercise?
     @State private var addGroupId: String?
     @State private var confirmDiscard = false
     @State private var confirmUnfinished = false
@@ -63,23 +62,24 @@ struct LiveWorkoutView: View {
             }
         }
         .sheet(isPresented: $picking) {
-            ExercisePickerView { exercise in
-                if addGroupId != nil {
+            if addGroupId != nil {
+                ExercisePickerView { exercise in
                     add(exercise, mode: .superset)
-                } else {
-                    // The picker sheet closes first; then the placement sheet opens
-                    // (also for the first exercise, so the session toggle is always visible).
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { picked = exercise }
                 }
-            }
-        }
-        .sheet(item: $picked) { exercise in
-            AddPlacementSheet(
-                exerciseName: exercise.name,
-                currentName: live.session?.currentExercise.map { live.name(of: $0) } ?? "",
-                hasCurrent: live.session?.currentExercise != nil
-            ) { mode, asSession in
-                add(exercise, mode: mode, asSession: asSession)
+            } else {
+                // Placement stays on this same sheet. In 0.1.6 the picker was
+                // dismissed and AddPlacementSheet was presented next; that
+                // transition aborts in UIKeyboardLayoutGuide when search is up
+                // (TestFlight 0.1.6 builds 29 and 31).
+                ExercisePickerView { _ in } placement: { exercise in
+                    AddPlacementSheet(
+                        exerciseName: exercise.name,
+                        currentName: live.session?.currentExercise.map { live.name(of: $0) } ?? "",
+                        hasCurrent: live.session?.currentExercise != nil
+                    ) { mode, asSession in
+                        add(exercise, mode: mode, asSession: asSession)
+                    }
+                }
             }
         }
         // Alerts (centered, no arrow): these are opened from menus and sheets,
@@ -1048,7 +1048,7 @@ struct LiveWorkoutView: View {
             }
         }
         addGroupId = nil
-        picked = nil
+        picking = false
     }
 
     private func requestFinish() {

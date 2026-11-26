@@ -2,8 +2,12 @@ import SwiftUI
 import UIKit
 
 /// Sheet: pick one exercise from the library (server full-text search).
-struct ExercisePickerView: View {
+/// Pass `placement` to push the next step on the same sheet (do not dismiss
+/// and present another sheet: that crashes on iOS 26/27 when the search
+/// keyboard is up).
+struct ExercisePickerView<Placement: View>: View {
     let onPick: (Exercise) -> Void
+    let placement: ((Exercise) -> Placement)?
 
     @Environment(ExerciseStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -11,6 +15,20 @@ struct ExercisePickerView: View {
     @State private var query = ""
     @State private var results: [Exercise]?
     @State private var searching = false
+    @State private var placing: Exercise?
+
+    init(onPick: @escaping (Exercise) -> Void) where Placement == EmptyView {
+        self.onPick = onPick
+        self.placement = nil
+    }
+
+    init(
+        onPick: @escaping (Exercise) -> Void = { _ in },
+        @ViewBuilder placement: @escaping (Exercise) -> Placement
+    ) {
+        self.onPick = onPick
+        self.placement = placement
+    }
 
     var body: some View {
         NavigationStack {
@@ -38,9 +56,14 @@ struct ExercisePickerView: View {
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("Szukaj ćwiczenia"))
             .navigationTitle("Wybierz ćwiczenie")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(item: $placing) { exercise in
+                if let placement {
+                    placement(exercise)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Anuluj") { close() }
+                    Button("Anuluj") { dismiss() }
                 }
             }
             .task { await store.loadIfNeeded() }
@@ -70,27 +93,18 @@ struct ExercisePickerView: View {
         }
     }
 
-    /// Dismissing this sheet while the search keyboard is still first responder
-    /// crashes on iOS 26/27 (UIKeyboardLayoutGuide Auto Layout). Hide the
-    /// keyboard first, then dismiss after the keyboard animation starts.
     private func pick(_ exercise: Exercise) {
-        resignKeyboard()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            onPick(exercise)
-            dismiss()
+        if placement != nil {
+            // Stay on this sheet and push placement. Dismissing the search
+            // sheet to present another one aborts in UIKeyboardLayoutGuide
+            // on iOS 26/27 (TestFlight builds 29 and 31).
+            dismissSearch()
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            placing = exercise
+            return
         }
-    }
-
-    private func close() {
-        resignKeyboard()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            dismiss()
-        }
-    }
-
-    private func resignKeyboard() {
-        dismissSearch()
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        onPick(exercise)
+        dismiss()
     }
 
     private func search() async {
