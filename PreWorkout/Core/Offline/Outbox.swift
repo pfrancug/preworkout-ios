@@ -249,7 +249,6 @@ final class Outbox {
         if !finished.isEmpty {
             forgetOptimistic(finished, userId: userId)
             NotificationCenter.default.post(name: .outboxFlushed, object: nil)
-            Analytics.send("Outbox.flushed", ["count": Analytics.countBucket(finished.count)])
         }
         if let first = rejected.first {
             rejectedMessage = first

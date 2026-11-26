@@ -44,6 +44,9 @@ struct LoginView: View {
             if busy { ProgressView().controlSize(.large) }
         }
         .disabled(busy)
+        .onAppear {
+            Analytics.send("Onboarding.stepViewed", ["step": "signIn"])
+        }
     }
 
     private var background: some View {

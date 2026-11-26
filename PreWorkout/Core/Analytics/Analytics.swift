@@ -5,6 +5,7 @@ import TelemetryDeck
 /// Disabled in Debug and when the App ID is empty. Never send names, emails, or Health/weight values.
 enum Analytics {
     private static let flag = Flag()
+    private static let firstOpenKey = "preworkout.analytics.firstOpenRecorded"
 
     static func start() {
 #if DEBUG
@@ -18,6 +19,7 @@ enum Analytics {
         config.testMode = isTestFlight
         TelemetryDeck.initialize(config: config)
         flag.set()
+        recordFirstOpenIfNeeded()
 #endif
     }
 
@@ -62,6 +64,40 @@ enum Analytics {
         case 7...10: return "7-10"
         default: return "11+"
         }
+    }
+
+    static func queryLengthBucket(_ count: Int) -> String {
+        switch count {
+        case ...0: return "0"
+        case 1...2: return "1-2"
+        case 3...5: return "3-5"
+        case 6...10: return "6-10"
+        case 11...20: return "11-20"
+        case 21...40: return "21-40"
+        default: return "40+"
+        }
+    }
+
+    /// Lowercased, trimmed search text, capped at 40 characters. Used only for
+    /// zero-result exercise searches (missing-library signal, not personal data).
+    static func normalizedSearchQuery(_ query: String) -> String {
+        String(query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().prefix(40))
+    }
+
+    /// Once per install. Existing installs (session, person, or saved tab) are
+    /// marked without sending, so an upgrade is not counted as a first open.
+    private static func recordFirstOpenIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: firstOpenKey) == nil else { return }
+        defaults.set(true, forKey: firstOpenKey)
+        let existingInstall =
+            KeychainToken.get() != nil
+            || !(defaults.string(forKey: "preworkout.activePersonId") ?? "").isEmpty
+            || defaults.object(forKey: "preworkout.tab") != nil
+            || defaults.object(forKey: "preworkout.live.defaultRest") != nil
+        guard !existingInstall else { return }
+        send("App.firstOpen")
+        send("Onboarding.stepViewed", ["step": "firstOpen"])
     }
 
     private static var isTestFlight: Bool {

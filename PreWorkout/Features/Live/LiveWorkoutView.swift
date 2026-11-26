@@ -85,7 +85,7 @@ struct LiveWorkoutView: View {
         // Alerts (centered, no arrow): these are opened from menus and sheets,
         // so there is no stable view a popover arrow could point at.
         .alert("Porzucić ten trening?", isPresented: $confirmDiscard) {
-            Button("Porzuć trening", role: .destructive) { live.clear() }
+            Button("Porzuć trening", role: .destructive) { live.discard() }
             Button("Anuluj", role: .cancel) {}
         } message: {
             Text("Wszystkie serie zapisane w tej sesji przepadną. Tego nie da się cofnąć.")

@@ -89,6 +89,19 @@ final class LiveStore {
         afterChange()
     }
 
+    /// Discards an unfinished session (including one restored after the app was killed).
+    func discard() {
+        if let session {
+            let completedExercises = session.exercises.filter { !$0.item.sets.isEmpty }.count
+            Analytics.send("Workout.liveAbandoned", [
+                "exerciseCount": Analytics.exerciseCountBucket(completedExercises),
+                "setCount": Analytics.countBucket(session.loggedSetCount),
+                "duration": Analytics.durationBucket(seconds: session.elapsedMs(LiveSession.nowMs) / 1000),
+            ])
+        }
+        clear()
+    }
+
     /// Ends the session (after saving or discarding): removes local and server copies.
     func clear() {
         session = nil

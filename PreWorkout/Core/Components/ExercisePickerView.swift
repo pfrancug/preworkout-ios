@@ -16,6 +16,7 @@ struct ExercisePickerView<Placement: View>: View {
     @State private var results: [Exercise]?
     @State private var searching = false
     @State private var placing: Exercise?
+    @State private var reportedEmptyQuery: String?
 
     init(onPick: @escaping (Exercise) -> Void) where Placement == EmptyView {
         self.onPick = onPick
@@ -109,7 +110,11 @@ struct ExercisePickerView<Placement: View>: View {
 
     private func search() async {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { results = nil; return }
+        guard !q.isEmpty else {
+            results = nil
+            reportedEmptyQuery = nil
+            return
+        }
         try? await Task.sleep(for: .milliseconds(250))
         guard !Task.isCancelled else { return }
         searching = true
@@ -119,10 +124,26 @@ struct ExercisePickerView<Placement: View>: View {
             guard !Task.isCancelled else { return }
             var seen = Set<String>()
             results = refs.compactMap { store.byId[$0.id] }.filter { seen.insert($0.id).inserted }
+            reportEmptySearchIfNeeded(query: q)
         } catch {
             // Offline / failed search: fall back to local matching.
-            if !Task.isCancelled { results = nil }
+            if !Task.isCancelled {
+                results = nil
+                reportEmptySearchIfNeeded(query: q)
+            }
         }
+    }
+
+    /// Fires once per settled zero-result query. `query` is the normalized
+    /// search text (not personal data) so missing exercises can be found.
+    private func reportEmptySearchIfNeeded(query: String) {
+        let normalized = Analytics.normalizedSearchQuery(query)
+        guard visible.isEmpty, reportedEmptyQuery != normalized else { return }
+        reportedEmptyQuery = normalized
+        Analytics.send("ExerciseSearch.noResults", [
+            "query": normalized,
+            "queryLength": Analytics.queryLengthBucket(query.count),
+        ])
     }
 }
 

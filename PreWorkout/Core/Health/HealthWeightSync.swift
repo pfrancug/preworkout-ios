@@ -51,11 +51,38 @@ final class HealthWeightSync {
         guard Self.isAvailable else { return false }
         do {
             try await store.requestAuthorization(toShare: [Self.type], read: [Self.type])
+            reportPermission(samples: try? await loadSamples())
             return canShare
         } catch {
             lastError = error.localizedDescription
+            reportPermission(samples: nil)
             return false
         }
+    }
+
+    /// HealthKit does not expose read-authorization status. `authorizationStatus`
+    /// only reflects write (share) access, so `result` is the share status
+    /// (granted / denied / notDetermined). `hasSamples` is whether a body-mass
+    /// query returned any samples after the prompt — empty can mean the user
+    /// denied read access *or* simply has no weight data in Health.
+    private func reportPermission(samples: [HKQuantitySample]?) {
+        let result: String
+        switch store.authorizationStatus(for: Self.type) {
+        case .sharingAuthorized: result = "granted"
+        case .sharingDenied: result = "denied"
+        case .notDetermined: result = "notDetermined"
+        @unknown default: result = "notDetermined"
+        }
+        let hasSamples: String
+        if let samples {
+            hasSamples = samples.isEmpty ? "false" : "true"
+        } else {
+            hasSamples = "unknown"
+        }
+        Analytics.send("HealthSync.permission", [
+            "result": result,
+            "hasSamples": hasSamples,
+        ])
     }
 
     /// Import Health samples we did not write, then write app-entered weigh-ins back to Health.

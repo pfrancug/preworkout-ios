@@ -82,6 +82,11 @@ struct EditProfileView: View {
             guard let item else { return }
             Task { await setPhoto(item) }
         }
+        .onAppear {
+            if isIncompleteProfile {
+                Analytics.send("Onboarding.stepViewed", ["step": "profileSetup"])
+            }
+        }
     }
 
     private var photoSection: some View {
@@ -120,6 +125,11 @@ struct EditProfileView: View {
             || form.age != base.age || form.height != base.height || form.sex != base.sex
     }
 
+    private var isIncompleteProfile: Bool {
+        [base.name, base.lastName, base.age, base.height, base.sex]
+            .allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
     private func validated() -> UserSettings? {
         let age = form.age.trimmingCharacters(in: .whitespaces)
         let height = form.height.trimmingCharacters(in: .whitespaces)
@@ -149,8 +159,7 @@ struct EditProfileView: View {
         error = nil
         defer { saving = false }
         do {
-            let wasIncomplete = [base.name, base.lastName, base.age, base.height, base.sex]
-                .allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+            let wasIncomplete = isIncompleteProfile
             try await APIClient.shared.saveSettings(body, person: appState.activePersonId)
             Analytics.send(wasIncomplete ? "Profile.completed" : "Profile.edited")
             base = body
