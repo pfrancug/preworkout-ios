@@ -802,16 +802,6 @@
         }
       }
     },
-    "Dane osobowe": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personal details"
-          }
-        }
-      }
-    },
     "Data": {
       "localizations": {
         "en": {
@@ -1182,6 +1172,16 @@
         }
       }
     },
+    "Edytuj profil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit profile"
+          }
+        }
+      }
+    },
     "Edytuj trening": {
       "localizations": {
         "en": {
@@ -1348,6 +1348,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importing %lld/%lld"
+          }
+        }
+      }
+    },
+    "Informacje": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
           }
         }
       }
@@ -2128,16 +2138,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes (optional)"
-          }
-        }
-      }
-    },
-    "Nowe zmiany": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New changes"
           }
         }
       }
