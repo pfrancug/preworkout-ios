@@ -250,23 +250,28 @@ final class LiveStore {
     }
 
     private func updateActivity() {
+        Task { await applyActivity() }
+    }
+
+    /// Activity.update/end are @concurrent in the iOS 27 SDK, so they cannot
+    /// take the main-actor stored `activity` directly. Look the instance up
+    /// from the process-wide list first, then await.
+    private func applyActivity() async {
         guard let s = session else {
             lastContent = nil
             activity = nil
-            Task { @MainActor in
-                for a in Activity<WorkoutActivityAttributes>.activities {
-                    await a.end(nil, dismissalPolicy: .immediate)
-                }
+            for a in Activity<WorkoutActivityAttributes>.activities {
+                await a.end(nil, dismissalPolicy: .immediate)
             }
             return
         }
         let state = content(s)
         guard state != lastContent else { return }
         lastContent = state
-        if let current = activity, current.activityState == .active || current.activityState == .stale {
-            Task { @MainActor in
-                await self.activity?.update(ActivityContent(state: state, staleDate: nil))
-            }
+        let id = activity?.id
+        if let id, activity?.activityState == .active || activity?.activityState == .stale,
+           let running = Activity<WorkoutActivityAttributes>.activities.first(where: { $0.id == id }) {
+            await running.update(ActivityContent(state: state, staleDate: nil))
             return
         }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
