@@ -32,7 +32,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select Xcode 27
         run: |
@@ -93,7 +93,7 @@ jobs:
       DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
       DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check secrets
         run: |

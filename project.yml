@@ -14,6 +14,8 @@ settings:
     MARKETING_VERSION: "0.1.6"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
+    # Catch Swift 6 isolation issues while staying on the Swift 5 language mode.
+    SWIFT_STRICT_CONCURRENCY: complete
     # Overridden in CI from repository secrets / variables. The Live Activity
     # extension uses the same id with a `.LiveActivity` suffix.
     APP_BUNDLE_ID: com.example.preworkout
