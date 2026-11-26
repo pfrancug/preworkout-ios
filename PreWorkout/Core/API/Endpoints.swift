@@ -92,21 +92,49 @@ extension APIClient {
     func latestWeight(person id: String) async throws -> (date: String, kg: Double)? {
         let rows = try await diary(person: id)
         return rows
-            .filter { ($0.weight ?? 0) > 0 }
+            .filter { $0.hasAnyWeight }
             .max { $0.date < $1.date }
-            .map { (String($0.date.prefix(10)), $0.weight ?? 0) }
+            .map { (String($0.date.prefix(10)), $0.displayWeight ?? 0) }
     }
 
-    func upsertDiaryWeight(date: String, weight: Double, id: Int? = nil, person: String) async throws -> DiaryRow {
-        struct Body: Encodable {
-            var id: Int?
-            var date: String
-            var weight: Double
-        }
+    func upsertDiaryWeight(
+        date: String,
+        weight: Double,
+        id: Int? = nil,
+        person: String
+    ) async throws -> DiaryRow {
         let row: DiaryRow = try await send(
             "PUT",
             personPath(person) + "/diary/entries",
-            body: Body(id: (id ?? 0) > 0 ? id : nil, date: date, weight: weight)
+            body: DiaryWeightPatch(
+                id: (id ?? 0) > 0 ? id : nil,
+                date: date,
+                weight: weight,
+                source: .app,
+                includeWeight: true,
+                includeHealthWeight: false
+            )
+        )
+        invalidate(["diary"], person: person)
+        return row
+    }
+
+    func upsertDiaryWeights(_ patches: [DiaryWeightPatch], person: String) async throws -> [DiaryRow] {
+        struct Body: Encodable { let entries: [DiaryWeightPatch] }
+        let rows: [DiaryRow] = try await send(
+            "PUT",
+            personPath(person) + "/diary/entries/batch",
+            body: Body(entries: patches)
+        )
+        invalidate(["diary"], person: person)
+        return rows
+    }
+
+    func upsertDiaryPatch(_ patch: DiaryWeightPatch, person: String) async throws -> DiaryRow {
+        let row: DiaryRow = try await send(
+            "PUT",
+            personPath(person) + "/diary/entries",
+            body: patch
         )
         invalidate(["diary"], person: person)
         return row

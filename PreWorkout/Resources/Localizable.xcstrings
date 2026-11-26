@@ -952,6 +952,16 @@
         }
       }
     },
+    "Dodane w PreWorkout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added in PreWorkout"
+          }
+        }
+      }
+    },
     "Dodatkowy ciężar": {
       "localizations": {
         "en": {
@@ -1242,6 +1252,16 @@
         }
       }
     },
+    "Health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health"
+          }
+        }
+      }
+    },
     "Historia celu": {
       "localizations": {
         "en": {
@@ -1258,6 +1278,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Name"
+          }
+        }
+      }
+    },
+    "Importowanie %lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing %lld/%lld"
           }
         }
       }
@@ -2964,6 +2994,16 @@
         }
       }
     },
+    "Ten dzień ma wagę z aplikacji i z Health.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This day has a weight from the app and from Health."
+          }
+        }
+      }
+    },
     "Teraz": {
       "localizations": {
         "en": {
@@ -3324,6 +3364,16 @@
         }
       }
     },
+    "Usuń oba": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete both"
+          }
+        }
+      }
+    },
     "Usuń serię": {
       "localizations": {
         "en": {
@@ -3340,6 +3390,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete permanently"
+          }
+        }
+      }
+    },
+    "Usuń z Health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete from Health"
+          }
+        }
+      }
+    },
+    "Usuń z aplikacji": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete from app"
           }
         }
       }
@@ -3450,6 +3520,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "A goal value can be at most 20,000."
+          }
+        }
+      }
+    },
+    "Wczytywanie z Health…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading from Health…"
           }
         }
       }
@@ -3874,6 +3954,16 @@
         }
       }
     },
+    "Zaimportowano z Apple Health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported from Apple Health"
+          }
+        }
+      }
+    },
     "Zakończ serię": {
       "localizations": {
         "en": {
@@ -3930,6 +4020,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved goal"
+          }
+        }
+      }
+    },
+    "Zapisywanie do Health %lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving to Health %lld/%lld"
           }
         }
       }
@@ -4100,6 +4200,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Done"
+          }
+        }
+      }
+    },
+    "Zsynchronizowano": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synced"
           }
         }
       }
@@ -4468,6 +4578,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sources"
+          }
+        }
+      }
+    },
+    "Źródło": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
           }
         }
       }

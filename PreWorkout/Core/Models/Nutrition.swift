@@ -42,18 +42,89 @@ struct NutritionGoalVersion: Codable, Identifiable, Hashable {
     var isRemoval: Bool { kcal == nil && protein == nil && fat == nil && carbs == nil }
 }
 
+/// Origin of a diary body-weight value.
+enum DiaryWeightSource: String, Codable, Hashable {
+    case app
+    case health
+}
+
+/// One day's diary patch when saving or importing body weight.
+struct DiaryWeightPatch: Encodable {
+    var id: Int?
+    var date: String
+    var weight: Double?
+    var source: DiaryWeightSource?
+    var healthWeight: Double?
+    var includeWeight: Bool = true
+    var includeHealthWeight: Bool = false
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, weight, source, healthWeight
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(id, forKey: .id)
+        try c.encode(date, forKey: .date)
+        if includeWeight {
+            try c.encode(weight, forKey: .weight)
+        }
+        try c.encodeIfPresent(source, forKey: .source)
+        if includeHealthWeight {
+            try c.encode(healthWeight, forKey: .healthWeight)
+        }
+    }
+}
+
 /// Diary row (only the fields the app reads). `id` is 0 when an older cache omitted it.
 struct DiaryRow: Decodable, Identifiable, Hashable {
     var id: Int
     var date: String
     var weight: Double?
+    var source: DiaryWeightSource
+    var healthWeight: Double?
 
-    private enum CodingKeys: String, CodingKey { case id, date, weight }
+    /// Weight entered in PreWorkout, if any.
+    var appWeight: Double? {
+        if source == .app, let weight, weight > 0 { return weight }
+        return nil
+    }
 
-    init(id: Int, date: String, weight: Double?) {
+    /// Weight imported from Apple Health, if any.
+    var importedWeight: Double? {
+        if let healthWeight, healthWeight > 0 { return healthWeight }
+        if source == .health, let weight, weight > 0 { return weight }
+        return nil
+    }
+
+    /// Preferred value for totals and the trend line: app, otherwise Health.
+    var displayWeight: Double? {
+        if let appWeight { return appWeight }
+        if let importedWeight { return importedWeight }
+        return weight
+    }
+
+    var hasAppWeight: Bool { (appWeight ?? 0) > 0 }
+    var hasImportedWeight: Bool { (importedWeight ?? 0) > 0 }
+    var hasBothWeights: Bool { hasAppWeight && hasImportedWeight }
+    var hasAnyWeight: Bool { hasAppWeight || hasImportedWeight }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, weight, source, healthWeight
+    }
+
+    init(
+        id: Int,
+        date: String,
+        weight: Double?,
+        source: DiaryWeightSource = .app,
+        healthWeight: Double? = nil
+    ) {
         self.id = id
         self.date = date
         self.weight = weight
+        self.source = source
+        self.healthWeight = healthWeight
     }
 
     init(from decoder: Decoder) throws {
@@ -61,5 +132,7 @@ struct DiaryRow: Decodable, Identifiable, Hashable {
         id = try c.decodeIfPresent(Int.self, forKey: .id) ?? 0
         date = try c.decode(String.self, forKey: .date)
         weight = try c.decodeIfPresent(Double.self, forKey: .weight)
+        source = try c.decodeIfPresent(DiaryWeightSource.self, forKey: .source) ?? .app
+        healthWeight = try c.decodeIfPresent(Double.self, forKey: .healthWeight)
     }
 }

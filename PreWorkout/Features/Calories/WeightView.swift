@@ -13,7 +13,7 @@ struct WeightView: View {
     @State private var loaded = false
 
     private var weighIns: [DiaryRow] {
-        rows.filter { ($0.weight ?? 0) > 0 }
+        rows.filter(\.hasAnyWeight)
             .sorted { $0.date < $1.date }
     }
 
@@ -41,15 +41,10 @@ struct WeightView: View {
                         Button {
                             Task { await syncHealth() }
                         } label: {
-                            HStack {
-                                Label("Synchronizuj z Health", systemImage: "heart")
-                                if health.busy {
-                                    Spacer()
-                                    ProgressView()
-                                }
-                            }
+                            Label("Synchronizuj z Health", systemImage: "heart")
                         }
                         .disabled(health.busy)
+                        syncProgress
                     } else {
                         Button {
                             Task { await connectHealth() }
@@ -72,13 +67,7 @@ struct WeightView: View {
                         Button {
                             editor = WeightEditor(row: row)
                         } label: {
-                            HStack {
-                                Text(DayString.label(String(row.date.prefix(10))))
-                                Spacer()
-                                Text(verbatim: "\((row.weight ?? 0).short()) kg")
-                                    .monospacedDigit()
-                                    .foregroundStyle(.primary)
-                            }
+                            WeightEntryRow(row: row)
                         }
                         .foregroundStyle(.primary)
                         .swipeActions {
@@ -106,15 +95,34 @@ struct WeightView: View {
                 await save(date: date, weight: weight, id: id)
             }
         }
-        .alert(
+        .confirmationDialog(
             "Usunąć ten pomiar?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible,
             presenting: pendingDelete
         ) { row in
-            Button("Usuń", role: .destructive) { Task { await delete(row) } }
+            if row.hasBothWeights {
+                Button("Usuń z aplikacji", role: .destructive) {
+                    Task { await delete(row, clearing: .app) }
+                }
+                Button("Usuń z Health", role: .destructive) {
+                    Task { await delete(row, clearing: .health) }
+                }
+                Button("Usuń oba", role: .destructive) {
+                    Task { await delete(row, clearing: .both) }
+                }
+            } else {
+                Button("Usuń", role: .destructive) {
+                    Task { await delete(row, clearing: .both) }
+                }
+            }
             Button("Anuluj", role: .cancel) {}
-        } message: { _ in
-            Text("Tej operacji nie można cofnąć.")
+        } message: { row in
+            if row.hasBothWeights {
+                Text("Ten dzień ma wagę z aplikacji i z Health.")
+            } else {
+                Text("Tej operacji nie można cofnąć.")
+            }
         }
         .alert("Błąd", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK", role: .cancel) {}
@@ -131,21 +139,71 @@ struct WeightView: View {
     }
 
     @ViewBuilder
+    private var syncProgress: some View {
+        if let progress = health.progress {
+            VStack(alignment: .leading, spacing: 8) {
+                if progress.phase == .done {
+                    Label("Zsynchronizowano", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else if progress.total > 0 {
+                    ProgressView(value: progress.fraction)
+                    Text(progressLabel(progress))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                } else {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text(progressLabel(progress))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func progressLabel(_ progress: HealthSyncProgress) -> String {
+        let done = progress.done
+        let total = progress.total
+        switch progress.phase {
+        case .reading:
+            String(localized: "Wczytywanie z Health…")
+        case .importing:
+            String(localized: "Importowanie \(done)/\(total)")
+        case .writing:
+            String(localized: "Zapisywanie do Health \(done)/\(total)")
+        case .done:
+            String(localized: "Zsynchronizowano")
+        }
+    }
+
+    @ViewBuilder
     private var chart: some View {
         if visible.count >= 2 {
-            Chart(visible) { row in
-                LineMark(
-                    x: .value(String(localized: "Data"), DayString.date(from: String(row.date.prefix(10))) ?? Date()),
-                    y: .value(String(localized: "Waga"), row.weight ?? 0)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(Color.accentColor)
-                PointMark(
-                    x: .value(String(localized: "Data"), DayString.date(from: String(row.date.prefix(10))) ?? Date()),
-                    y: .value(String(localized: "Waga"), row.weight ?? 0)
-                )
-                .foregroundStyle(Color.accentColor)
+            Chart {
+                ForEach(linePoints) { point in
+                    LineMark(
+                        x: .value(String(localized: "Data"), point.date),
+                        y: .value(String(localized: "Waga"), point.kg)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(Color.accentColor)
+                }
+                ForEach(plotPoints) { point in
+                    PointMark(
+                        x: .value(String(localized: "Data"), point.date),
+                        y: .value(String(localized: "Waga"), point.kg)
+                    )
+                    .foregroundStyle(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                    .symbol(by: .value(String(localized: "Źródło"), point.sourceTitle))
+                }
             }
+            .chartForegroundStyleScale([
+                String(localized: "Aplikacja"): Color.accentColor,
+                String(localized: "Health"): Color.pink,
+            ])
             .chartYAxis { AxisMarks(position: .leading) }
             .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) }
             .frame(height: 220)
@@ -158,6 +216,30 @@ struct WeightView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+        }
+    }
+
+    private var linePoints: [WeightChartPoint] {
+        visible.compactMap { row in
+            guard let kg = row.displayWeight, let date = DayString.date(from: String(row.date.prefix(10))) else {
+                return nil
+            }
+            return WeightChartPoint(id: String(row.date.prefix(10)) + "-line", date: date, kg: kg, source: row.hasAppWeight ? .app : .health)
+        }
+    }
+
+    private var plotPoints: [WeightChartPoint] {
+        visible.flatMap { row -> [WeightChartPoint] in
+            guard let date = DayString.date(from: String(row.date.prefix(10))) else { return [] }
+            let day = String(row.date.prefix(10))
+            var points: [WeightChartPoint] = []
+            if let kg = row.appWeight {
+                points.append(WeightChartPoint(id: day + "-app", date: date, kg: kg, source: .app))
+            }
+            if let kg = row.importedWeight {
+                points.append(WeightChartPoint(id: day + "-health", date: date, kg: kg, source: .health))
+            }
+            return points
         }
     }
 
@@ -188,6 +270,11 @@ struct WeightView: View {
     private func syncHealth() async {
         let person = appState.activePersonId
         rows = await health.synchronize(person: person, rows: rows)
+        guard health.progress?.phase == .done else { return }
+        try? await Task.sleep(for: .seconds(2.5))
+        if health.progress?.phase == .done {
+            health.progress = nil
+        }
     }
 
     private func save(date: Date, weight: Double, id: Int?) async {
@@ -202,18 +289,127 @@ struct WeightView: View {
         }
     }
 
-    private func delete(_ row: DiaryRow) async {
+    private func delete(_ row: DiaryRow, clearing: WeightClearing) async {
         let person = appState.activePersonId
         let day = String(row.date.prefix(10))
         do {
             if row.id > 0 {
-                try await APIClient.shared.deleteDiaryEntry(row.id, person: person)
+                try await clearWeights(row, day: day, person: person, clearing: clearing)
+                rows = try await APIClient.shared.diary(person: person)
+            } else {
+                rows.removeAll { $0.id == row.id && $0.date == row.date }
             }
-            rows.removeAll { $0.id == row.id && $0.date == row.date }
-            await health.delete(day: day, person: person)
+            if clearing != .health {
+                await health.delete(day: day, person: person)
+            }
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private func clearWeights(
+        _ row: DiaryRow,
+        day: String,
+        person: String,
+        clearing: WeightClearing
+    ) async throws {
+        let patch: DiaryWeightPatch
+        switch clearing {
+        case .app:
+            patch = DiaryWeightPatch(
+                id: row.id,
+                date: day,
+                weight: nil,
+                source: .app,
+                includeWeight: true,
+                includeHealthWeight: false
+            )
+        case .health:
+            patch = DiaryWeightPatch(
+                id: row.id,
+                date: day,
+                healthWeight: nil,
+                includeWeight: false,
+                includeHealthWeight: true
+            )
+        case .both:
+            patch = DiaryWeightPatch(
+                id: row.id,
+                date: day,
+                weight: nil,
+                source: .app,
+                healthWeight: nil,
+                includeWeight: true,
+                includeHealthWeight: true
+            )
+        }
+        _ = try await APIClient.shared.upsertDiaryPatch(patch, person: person)
+    }
+}
+
+private enum WeightClearing {
+    case app, health, both
+}
+
+private struct WeightChartPoint: Identifiable {
+    var id: String
+    var date: Date
+    var kg: Double
+    var source: DiaryWeightSource
+
+    var sourceTitle: String {
+        switch source {
+        case .app: String(localized: "Aplikacja")
+        case .health: String(localized: "Health")
+        }
+    }
+}
+
+private struct WeightEntryRow: View {
+    let row: DiaryRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(DayString.label(String(row.date.prefix(10))))
+            HStack(spacing: 12) {
+                if let kg = row.appWeight {
+                    weightValue(kg, source: .app)
+                }
+                if let kg = row.importedWeight {
+                    weightValue(kg, source: .health)
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func weightValue(_ kg: Double, source: DiaryWeightSource) -> some View {
+        HStack(spacing: 6) {
+            WeightSourceBadge(source: source)
+            Text(verbatim: "\(kg.short()) kg")
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(source == .app
+            ? String(localized: "Dodane w PreWorkout")
+            : String(localized: "Zaimportowano z Apple Health"))
+        .accessibilityValue(Text(verbatim: "\(kg.short()) kg"))
+    }
+}
+
+private struct WeightSourceBadge: View {
+    let source: DiaryWeightSource
+
+    var body: some View {
+        Text(source == .app ? String(localized: "Aplikacja") : String(localized: "Health"))
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background((source == .app ? Color.accentColor : Color.pink).opacity(0.15))
+            .foregroundStyle(source == .app ? Color.accentColor : Color.pink)
+            .clipShape(Capsule())
+            .accessibilityHidden(true)
     }
 }
 
@@ -247,16 +443,19 @@ private struct WeightEditor: Identifiable {
     var date: Date
     var weight: Double?
     var entryId: Int?
+    var importedWeight: Double?
 
     init(row: DiaryRow?) {
         if let row, let date = DayString.date(from: String(row.date.prefix(10))) {
             self.date = date
-            self.weight = row.weight
+            self.weight = row.appWeight ?? row.importedWeight
             self.entryId = row.id > 0 ? row.id : nil
+            self.importedWeight = row.hasBothWeights ? row.importedWeight : nil
         } else {
             self.date = Date()
             self.weight = nil
             self.entryId = nil
+            self.importedWeight = nil
         }
     }
 }
@@ -272,6 +471,15 @@ private struct WeightEditorSheet: View {
             Form {
                 DatePicker("Data", selection: $editor.date, in: ...Date(), displayedComponents: .date)
                 DecimalField("Waga", value: $editor.weight, unit: "kg")
+                if let imported = editor.importedWeight {
+                    LabeledContent("Health") {
+                        Text(verbatim: "\(imported.short()) kg")
+                            .monospacedDigit()
+                    }
+                    Text("Zaimportowano z Apple Health")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .navigationTitle(editor.entryId == nil ? String(localized: "Dodaj wagę") : String(localized: "Edytuj wagę"))
             .navigationBarTitleDisplayMode(.inline)
