@@ -14,98 +14,12 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            if let account = appState.account {
-                Section {
-                    if let email = account.email, !email.isEmpty {
-                        LabeledContent("E-mail", value: email)
-                    } else if !account.name.isEmpty {
-                        LabeledContent("Nazwa", value: account.name)
-                    }
-
-                    if account.appleLinked {
-                        Label("Połączono z Apple ID", systemImage: "checkmark.circle.fill")
-                    } else {
-                        Button {
-                            Task { await linkWithApple() }
-                        } label: {
-                            HStack {
-                                Text("Powiąż z Apple")
-                                if busy {
-                                    Spacer()
-                                    ProgressView()
-                                }
-                            }
-                        }
-                        .disabled(busy)
-                    }
-                } header: {
-                    Text("Konto")
-                } footer: {
-                    if linkedFeedback {
-                        Text("Powiązano konto z Apple ID.")
-                    } else if !account.appleLinked {
-                        Text("Powiąż konto z Apple ID, aby logować się przez Apple.")
-                    }
-                }
-            }
-
-            Section {
-                Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    LabeledContent("Język") {
-                        HStack(spacing: 4) {
-                            Text(currentLanguage)
-                            Image(systemName: "arrow.up.forward.app")
-                        }
-                        .foregroundStyle(.secondary)
-                    }
-                }
-                .tint(.primary)
-            } footer: {
-                Text("Język zmienisz w Ustawieniach iOS › PreWorkout › Język.")
-            }
-
-            Section("Trening na żywo") {
-                Picker("Domyślny tryb timera", selection: defaultTimerMode) {
-                    ForEach(TimedSetMode.allCases) { mode in
-                        Text(verbatim: mode.title).tag(mode)
-                    }
-                }
-            } footer: {
-                Text("Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.")
-            }
-
-            Section("Aplikacja") {
-                LabeledContent("Serwer", value: ServerConfig.baseURL?.host() ?? "–")
-                LabeledContent("Wersja", value: version)
-                if let privacy = URL(string: "https://preworkout.fit/privacy") {
-                    Link("Polityka prywatności", destination: privacy)
-                }
-                if let support = URL(string: "https://preworkout.fit/support") {
-                    Link("Wsparcie", destination: support)
-                }
-            }
-
-            Section {
-                Button("Wyloguj", role: .destructive) { confirmLogout = true }
-                    .disabled(busy)
-            }
-
-            if let account = appState.account {
-                Section {
-                    Button("Usuń konto", role: .destructive) { confirmDelete = true }
-                        .disabled(busy || account.isAdmin)
-                } footer: {
-                    if account.isAdmin {
-                        Text("Konto właściciela zawiera pierwotne dane i nie można go usunąć.")
-                    } else {
-                        Text("Trwale usuwa konto razem ze wszystkimi profilami, wpisami i własnymi ćwiczeniami.")
-                    }
-                }
-            }
+            accountSection
+            languageSection
+            liveWorkoutSection
+            appSection
+            logoutSection
+            deleteSection
         }
         .navigationTitle("Ustawienia")
         .navigationBarTitleDisplayMode(.inline)
@@ -123,6 +37,111 @@ struct SettingsView: View {
             Button("OK", role: .cancel) { error = nil }
         } message: {
             if let error { Text(error) }
+        }
+    }
+
+    @ViewBuilder private var accountSection: some View {
+        if let account = appState.account {
+            Section {
+                if let email = account.email, !email.isEmpty {
+                    LabeledContent("E-mail", value: email)
+                } else if !account.name.isEmpty {
+                    LabeledContent("Nazwa", value: account.name)
+                }
+
+                if account.appleLinked {
+                    Label("Połączono z Apple ID", systemImage: "checkmark.circle.fill")
+                } else {
+                    Button {
+                        Task { await linkWithApple() }
+                    } label: {
+                        HStack {
+                            Text("Powiąż z Apple")
+                            if busy {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(busy)
+                }
+            } header: {
+                Text("Konto")
+            } footer: {
+                if linkedFeedback {
+                    Text("Powiązano konto z Apple ID.")
+                } else if !account.appleLinked {
+                    Text("Powiąż konto z Apple ID, aby logować się przez Apple.")
+                }
+            }
+        }
+    }
+
+    private var languageSection: some View {
+        Section {
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                LabeledContent("Język") {
+                    HStack(spacing: 4) {
+                        Text(currentLanguage)
+                        Image(systemName: "arrow.up.forward.app")
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .tint(.primary)
+        } footer: {
+            Text("Język zmienisz w Ustawieniach iOS › PreWorkout › Język.")
+        }
+    }
+
+    private var liveWorkoutSection: some View {
+        Section("Trening na żywo") {
+            Picker("Domyślny tryb timera", selection: defaultTimerMode) {
+                ForEach(TimedSetMode.allCases) { mode in
+                    Text(verbatim: mode.title).tag(mode)
+                }
+            }
+        } footer: {
+            Text("Używany, gdy ćwiczenie nie ma jeszcze zapamiętanego trybu.")
+        }
+    }
+
+    private var appSection: some View {
+        Section("Aplikacja") {
+            LabeledContent("Serwer", value: ServerConfig.baseURL?.host() ?? "–")
+            LabeledContent("Wersja", value: version)
+            if let privacy = URL(string: "https://preworkout.fit/privacy") {
+                Link("Polityka prywatności", destination: privacy)
+            }
+            if let support = URL(string: "https://preworkout.fit/support") {
+                Link("Wsparcie", destination: support)
+            }
+        }
+    }
+
+    private var logoutSection: some View {
+        Section {
+            Button("Wyloguj", role: .destructive) { confirmLogout = true }
+                .disabled(busy)
+        }
+    }
+
+    @ViewBuilder private var deleteSection: some View {
+        if let account = appState.account {
+            Section {
+                Button("Usuń konto", role: .destructive) { confirmDelete = true }
+                    .disabled(busy || account.isAdmin)
+            } footer: {
+                if account.isAdmin {
+                    Text("Konto właściciela zawiera pierwotne dane i nie można go usunąć.")
+                } else {
+                    Text("Trwale usuwa konto razem ze wszystkimi profilami, wpisami i własnymi ćwiczeniami.")
+                }
+            }
         }
     }
 
