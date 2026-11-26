@@ -169,13 +169,13 @@ struct WeightView: View {
         let total = progress.total
         switch progress.phase {
         case .reading:
-            String(localized: "Wczytywanie z Health…")
+            return String(localized: "Wczytywanie z Health…")
         case .importing:
-            String(localized: "Importowanie \(done)/\(total)")
+            return String(localized: "Importowanie \(done)/\(total)")
         case .writing:
-            String(localized: "Zapisywanie do Health \(done)/\(total)")
+            return String(localized: "Zapisywanie do Health \(done)/\(total)")
         case .done:
-            String(localized: "Zsynchronizowano")
+            return String(localized: "Zsynchronizowano")
         }
     }
 

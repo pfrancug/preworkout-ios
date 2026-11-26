@@ -102,7 +102,7 @@ final class HealthWeightSync {
     }
 
     func delete(day: String, person: String) async {
-        guard canShare, let date = DayString.date(from: day) else { return }
+        guard canShare, DayString.date(from: day) != nil else { return }
         do {
             let samples = try await loadSamples()
             let id = Self.syncIdentifier(person: person, day: day)
