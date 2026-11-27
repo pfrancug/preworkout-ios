@@ -22,6 +22,7 @@ EN = {
     "Brak": "None",
     "Brak aliasów": "No aliases",
     "Brak połączenia": "No connection",
+    "Serwer jest chwilowo niedostępny. Spróbuj ponownie za chwilę.": "The server is temporarily unavailable. Try again shortly.",
     "Oczekuje na synchronizację: %lld": "Waiting to sync: %lld",
     "Dotknij, aby spróbować teraz": "Tap to try now",
     "Nie zapisano zmiany": "A change was not saved",

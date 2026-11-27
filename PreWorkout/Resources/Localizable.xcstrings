@@ -3044,6 +3044,16 @@
         }
       }
     },
+    "Serwer jest chwilowo niedostępny. Spróbuj ponownie za chwilę.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is temporarily unavailable. Try again shortly."
+          }
+        }
+      }
+    },
     "Sesja": {
       "localizations": {
         "en": {

@@ -80,8 +80,17 @@ enum OutboxRules {
         return (error as NSError).domain == NSURLErrorDomain
     }
 
+    /// Network failures and temporary HTTP errors (503, 5xx, 408, 429).
+    static func isRetryable(_ error: Error) -> Bool {
+        if isNetworkError(error) { return true }
+        if case APIError.http(let status, let message) = error {
+            return APIError.isTransientStatus(status) || APIError.looksLikeDriverMessage(message)
+        }
+        return false
+    }
+
     static func classify(_ error: Error, method: String) -> Outcome {
-        if isNetworkError(error) { return .retry }
+        if isRetryable(error) { return .retry }
         switch error {
         case APIError.unauthorized:
             return .unauthorized

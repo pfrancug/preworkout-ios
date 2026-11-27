@@ -15,11 +15,31 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unauthorized: return String(localized: "Sesja wygasła, zaloguj się ponownie.")
-        case .http(_, let message): return message
+        case .http(let status, let message): return Self.safeMessage(status: status, message: message)
         case .invalidResponse: return String(localized: "Nieprawidłowa odpowiedź serwera.")
         case .decoding(let detail): return String(localized: "Błąd danych: \(detail)")
         case .noServer: return String(localized: "Podaj adres serwera.")
         }
+    }
+
+    /// 503 / 5xx / timeout / rate-limit: the client should retry or queue.
+    static func isTransientStatus(_ status: Int) -> Bool {
+        status >= 500 || status == 408 || status == 425 || status == 429
+    }
+
+    /// Raw Turso / libsql / socket text must never be shown in the UI.
+    static func looksLikeDriverMessage(_ message: String) -> Bool {
+        message.range(
+            of: #"Hrana|SQLITE_|libsql|ECONNRESET|ECONNREFUSED|ETIMEDOUT|connection closed|fetch failed|IncompleteMessage|HttpDispatch|socket hang up"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+    }
+
+    static func safeMessage(status: Int, message: String) -> String {
+        if isTransientStatus(status) || looksLikeDriverMessage(message) {
+            return String(localized: "Serwer jest chwilowo niedostępny. Spróbuj ponownie za chwilę.")
+        }
+        return message
     }
 }
 
@@ -117,13 +137,29 @@ final class APIClient: @unchecked Sendable {
             }
             return try decode(data)
         } catch {
-            if let cached, isRetryable(error) { return try decode(cached.data) }
+            if OutboxRules.isRetryable(error) {
+                try? await Task.sleep(for: .milliseconds(250))
+                do {
+                    let (data, http) = try await raw("GET", path, etag: cached?.etag)
+                    if http.statusCode == 304, let cached {
+                        return try decode(cached.data)
+                    }
+                    if let cacheKey {
+                        DiskCache.writeRaw(cacheKey, etag: http.value(forHTTPHeaderField: "ETag"), data: data)
+                    }
+                    return try decode(data)
+                } catch {
+                    if let cached, isCacheFallback(error) { return try decode(cached.data) }
+                    throw error
+                }
+            }
+            if let cached, isCacheFallback(error) { return try decode(cached.data) }
             throw error
         }
     }
 
-    /// Network failures can fall back to a cached body; auth errors must not.
-    private func isRetryable(_ error: Error) -> Bool {
+    /// Network or 5xx failures can fall back to a cached body; auth errors must not.
+    private func isCacheFallback(_ error: Error) -> Bool {
         if case APIError.unauthorized = error { return false }
         if case APIError.http(let status, _) = error, status == 401 { return false }
         return true
@@ -161,7 +197,7 @@ final class APIClient: @unchecked Sendable {
             let (data, _) = try await raw(method, path, body: body)
             return data
         } catch {
-            guard OutboxRules.isNetworkError(error) else { throw error }
+            guard OutboxRules.isRetryable(error) else { throw error }
             await Outbox.shared.enqueue(kind: kind, person: person, key: key, method: method, path: path, body: body)
             return nil
         }
